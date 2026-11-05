@@ -8,6 +8,7 @@
 \*---------------------------------------------------------*/
 
 #include <cstdio>
+#include <cstring>
 #include "RGBController_ViaRGBMatrix.h"
 #include "ViaColor.h"
 #include "ViaLog.h"
@@ -21,6 +22,9 @@ RGBController_ViaRGBMatrix::RGBController_ViaRGBMatrix(ViaRGBMatrixController* c
     plugin_api      = api;
     rgb_controller  = NULL;
     max_effect      = 0;
+    host_driven     = false;
+
+    memset(&firmware_state, 0, sizeof(firmware_state));
 }
 
 RGBController_ViaRGBMatrix::~RGBController_ViaRGBMatrix()
@@ -104,7 +108,12 @@ bool RGBController_ViaRGBMatrix::Register()
 /*---------------------------------------------------------*\
 | Deleting the virtual controller joins its device thread,  |
 | so no callback is running or pending once this returns;   |
-| only then can the engine be stopped for good              |
+| only then can the engine be stopped for good.             |
+|                                                           |
+| A host-driven state (Direct, custom effect) would outlive |
+| OpenRGB and be read back as "current" next time, e.g. a   |
+| night-dimmed brightness; the firmware state goes back     |
+| instead. Fails harmlessly if the keyboard was unplugged.  |
 \*---------------------------------------------------------*/
 void RGBController_ViaRGBMatrix::Unregister()
 {
@@ -118,6 +127,21 @@ void RGBController_ViaRGBMatrix::Unregister()
     rgb_controller = NULL;
 
     engine.Stop();
+
+    if(host_driven)
+    {
+        sync.Apply(firmware_state, false);
+        host_driven = false;
+    }
+}
+
+void RGBController_ViaRGBMatrix::EnterHostDriven()
+{
+    if(!host_driven)
+    {
+        firmware_state  = sync.GetState();
+        host_driven     = true;
+    }
 }
 
 void RGBController_ViaRGBMatrix::OnUpdateLEDs()
@@ -127,6 +151,7 @@ void RGBController_ViaRGBMatrix::OnUpdateLEDs()
         return;
     }
 
+    EnterHostDriven();
     engine.Stop();
 
     via_rgb_state next = sync.GetState();
@@ -167,6 +192,7 @@ void RGBController_ViaRGBMatrix::ApplyFirmwareEffect(int mode_idx, bool save)
     via_rgb_state   next    = sync.GetState();
     unsigned int    flags   = rgb_controller->GetModeFlags(mode_idx);
 
+    host_driven = false;
     next.effect = via_mode_to_effect(mode_idx);
 
     if(flags & MODE_FLAG_HAS_BRIGHTNESS)
@@ -192,6 +218,8 @@ void RGBController_ViaRGBMatrix::RunCustomEffect(int mode_idx)
 {
     via_effect_params   params;
     unsigned int        color_count = rgb_controller->GetModeColorsCount(mode_idx);
+
+    EnterHostDriven();
 
     params.brightness   = (unsigned char)rgb_controller->GetModeBrightness(mode_idx);
     params.speed        = (unsigned char)rgb_controller->GetModeSpeed(mode_idx);

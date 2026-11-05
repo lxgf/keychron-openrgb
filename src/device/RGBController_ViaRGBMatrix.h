@@ -41,6 +41,14 @@ private:
     ViaLightingSync             sync;
     ViaEffectEngine             engine;
 
+    /*-----------------------------------------------------*\
+    | Firmware state saved when Direct or a custom effect   |
+    | takes over, put back when the device is unregistered  |
+    \*-----------------------------------------------------*/
+    bool                        host_driven;
+    via_rgb_state               firmware_state;
+
+    void                EnterHostDriven();
     void                OnUpdateLEDs();
     void                OnUpdateMode(bool save);
     void                ApplyFirmwareEffect(int mode_idx, bool save);

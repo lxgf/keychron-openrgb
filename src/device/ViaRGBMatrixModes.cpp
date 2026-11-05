@@ -71,7 +71,9 @@ static mode via_build_effect_mode(const via_device_entry* entry, unsigned char e
 
 /*---------------------------------------------------------*\
 | Custom effects are host-driven: nothing to save to the    |
-| keyboard, so no MODE_FLAG_MANUAL_SAVE                     |
+| keyboard, so no MODE_FLAG_MANUAL_SAVE. They start at full |
+| brightness rather than the keyboard's current one, which  |
+| may be a leftover dimmed state of an earlier session.     |
 \*---------------------------------------------------------*/
 static mode via_build_custom_mode(const via_custom_effect_desc* desc, unsigned int custom_idx, const via_rgb_state& current)
 {
@@ -82,7 +84,7 @@ static mode via_build_custom_mode(const via_custom_effect_desc* desc, unsigned i
     Custom.flags            = desc->flags | MODE_FLAG_HAS_BRIGHTNESS;
     Custom.brightness_min   = VIA_VALUE_MIN;
     Custom.brightness_max   = VIA_VALUE_MAX;
-    Custom.brightness       = current.brightness;
+    Custom.brightness       = VIA_VALUE_MAX;
     Custom.color_mode       = MODE_COLORS_NONE;
 
     if(desc->flags & MODE_FLAG_HAS_SPEED)

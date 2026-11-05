@@ -5,8 +5,8 @@
 |   controller: one zone, one LED, Direct mode, the         |
 |   firmware's effects and the custom effects. Firmware     |
 |   effects and Direct apply synchronously on OpenRGB's     |
-|   per-device call thread; custom effects hand their mode  |
-|   values to the effect engine.                            |
+|   per-device call thread; custom effects run on the       |
+|   effect engine with their settings from the plugin tab.  |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/

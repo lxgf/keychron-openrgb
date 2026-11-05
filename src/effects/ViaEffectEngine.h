@@ -5,6 +5,7 @@
 |   The thread exists only while a custom mode is active    |
 |   and sleeps for exactly as long as the effect asks, so   |
 |   a slow effect costs a handful of wakeups per minute.    |
+|   Settings changes wake it at once.                       |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
@@ -26,7 +27,7 @@ public:
 
     void    SetContext(const via_effect_context& new_context);
 
-    void    Run(unsigned int effect_idx, const via_effect_params& new_params);
+    void    Run(unsigned int effect_idx);
     void    Stop();
 
 private:
@@ -39,10 +40,8 @@ private:
     std::mutex                  engine_lock;
     std::condition_variable     engine_cv;
     bool                        running;
-    bool                        params_changed;
     bool                        settings_changed;
     unsigned int                active_effect;
-    via_effect_params           params;
 
     void    EngineThread(unsigned int effect_idx);
 };

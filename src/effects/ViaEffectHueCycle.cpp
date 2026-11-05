@@ -2,7 +2,7 @@
 | ViaEffectHueCycle.cpp                                     |
 |                                                           |
 |   Runs a firmware effect (reactive ones work best) and    |
-|   walks its hue round the color wheel. Mode speed sets    |
+|   walks its hue round the color wheel. "hue_speed" sets   |
 |   the cycle time: 1 = 120 s, 100 = 1.2 s per turn.        |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
@@ -22,8 +22,10 @@ public:
     {
         context         = effect_context;
         base_effect     = VIA_EFFECT_SOLID_COLOR;
+        brightness      = 255;
         saturation      = 255;
         effect_speed    = 128;
+        hue_speed       = 20;
         hue             = 0.0;
         last_ms         = 0;
     }
@@ -31,8 +33,10 @@ public:
     void Configure(const nlohmann::json& settings) override
     {
         base_effect     = via_resolve_effect(context, settings.value("base_effect", "Solid Splash"));
+        brightness      = via_setting_brightness(settings, "brightness");
         saturation      = (unsigned char)settings.value("saturation", 255);
-        effect_speed    = (unsigned char)settings.value("effect_speed", 128);
+        effect_speed    = via_setting_speed(settings, "effect_speed");
+        hue_speed       = settings.value("hue_speed", 20);
     }
 
     void Start(const via_rgb_state& current) override
@@ -41,9 +45,9 @@ public:
         last_ms = 0;
     }
 
-    unsigned int Tick(unsigned long long now_ms, const via_effect_params& params, via_rgb_state* state) override
+    unsigned int Tick(unsigned long long now_ms, via_rgb_state* state) override
     {
-        double period_ms = HUE_CYCLE_PERIOD_AT_SPEED_1_MS / (params.speed > 0 ? params.speed : 1);
+        double period_ms = HUE_CYCLE_PERIOD_AT_SPEED_1_MS / (hue_speed > 0 ? hue_speed : 1);
 
         if(last_ms != 0)
         {
@@ -55,7 +59,7 @@ public:
         state->effect       = base_effect;
         state->hue          = (unsigned char)hue;
         state->sat          = saturation;
-        state->brightness   = params.brightness;
+        state->brightness   = brightness;
         state->speed        = effect_speed;
 
         /*-------------------------------------------------*\
@@ -69,8 +73,10 @@ public:
 private:
     via_effect_context  context;
     unsigned char       base_effect;
+    unsigned char       brightness;
     unsigned char       saturation;
     unsigned char       effect_speed;
+    int                 hue_speed;
     double              hue;
     unsigned long long  last_ms;
 };

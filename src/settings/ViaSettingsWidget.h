@@ -1,9 +1,9 @@
 /*---------------------------------------------------------*\
 | ViaSettingsWidget.h                                       |
 |                                                           |
-|   Plugin tab under Settings: the custom effect options    |
-|   that OpenRGB's per-mode controls (brightness, speed,    |
-|   colors) cannot express. Changes apply immediately and   |
+|   Plugin tab under Settings: every option of the custom   |
+|   modes (their OpenRGB mode controls are inactive).       |
+|   Changes apply immediately and                           |
 |   are written to OpenRGB.json shortly after. Follows the  |
 |   OpenRGB interface language.                             |
 |                                                           |
@@ -48,6 +48,7 @@ private:
     void            AddChoice(QFormLayout* form, const char* section, const char* key, const char* label, const choice_list& choices);
     void            AddNumber(QFormLayout* form, const char* section, const char* key, const char* label, int min, int max, const char* suffix);
     void            AddCheck(QFormLayout* form, const char* section, const char* key, const char* label);
+    void            AddColor(QFormLayout* form, const char* section, const char* key, const char* label);
     void            AddTime(QFormLayout* form, const char* section, const char* key, const char* label);
     void            AddPlaylistQueue(QFormLayout* form, const char* section, const char* key);
 

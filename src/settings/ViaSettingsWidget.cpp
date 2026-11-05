@@ -7,11 +7,13 @@
 \*---------------------------------------------------------*/
 
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QComboBox>
 #include <QEvent>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSpinBox>
@@ -25,6 +27,7 @@
 #include "ViaTranslation.h"
 
 #define SAVE_DELAY_MS                   500
+#define COLOR_SWATCH_WIDTH              60
 
 ViaSettingsWidget::ViaSettingsWidget(ViaSettings* settings_ptr, QWidget* parent)
     : QWidget(parent)
@@ -78,46 +81,63 @@ void ViaSettingsWidget::BuildContent()
 
     QWidget*        content         = new QWidget();
     QVBoxLayout*    content_layout  = new QVBoxLayout(content);
-    QLabel*         intro           = new QLabel(via_tr("Brightness, speed and colors of each custom mode are set on the Devices tab like any other mode. "
-                                                        "The options below cover the rest and apply immediately."));
+    QLabel*         intro           = new QLabel(via_tr("Custom modes are set up only here: brightness, colors and speeds included. "
+                                                        "On the Devices tab their controls stay inactive. Changes apply immediately."));
 
     intro->setWordWrap(true);
     content_layout->addWidget(intro);
 
     QFormLayout* form;
 
-    form = AddGroup(content, "Hue Cycle", "Mode speed: how fast the hue goes round (1 = 2 min per turn, 100 = 1.2 s).");
+    form = AddGroup(content, "Hue Cycle", "Walks the hue of the firmware effect round the color wheel (hue speed 1 = 2 min per turn, 100 = 1.2 s).");
     AddEffectChoice(form, "hue_cycle", "base_effect",  "Firmware effect");
+    AddNumber      (form, "hue_cycle", "brightness",   "Brightness",    0, 100, " %");
     AddNumber      (form, "hue_cycle", "saturation",   "Saturation",    0, 255, "");
     AddNumber      (form, "hue_cycle", "effect_speed", "Effect speed",  0, 255, "");
+    AddNumber      (form, "hue_cycle", "hue_speed",    "Hue speed",     1, 100, "");
 
-    form = AddGroup(content, "Audio Reactive", "Listens to the default output device. Mode speed is the resting effect speed; colors: bass, treble.");
-    AddEffectChoice(form, "audio", "base_effect", "Firmware effect");
-    AddChoice      (form, "audio", "target",      "Bass drives",  { { "Brightness", "brightness" }, { "Speed", "speed" }, { "Both", "both" } });
-    AddChoice      (form, "audio", "color_mode",  "Color",        { { "First color", "fixed" }, { "Bass to treble blend", "spectrum" } });
-    AddNumber      (form, "audio", "sensitivity", "Sensitivity",  10, 400, " %");
-    AddNumber      (form, "audio", "floor",       "Minimum brightness", 0, 100, " %");
+    form = AddGroup(content, "Audio Reactive", "Listens to the default output device. Effect speed is the resting speed when bass drives the speed.");
+    AddEffectChoice(form, "audio", "base_effect",  "Firmware effect");
+    AddNumber      (form, "audio", "brightness",   "Brightness",    0, 100, " %");
+    AddColor       (form, "audio", "bass_color",   "Bass color");
+    AddColor       (form, "audio", "treble_color", "Treble color");
+    AddChoice      (form, "audio", "target",       "Bass drives",   { { "Brightness", "brightness" }, { "Speed", "speed" }, { "Both", "both" } });
+    AddChoice      (form, "audio", "color_mode",   "Color",         { { "Bass color only", "fixed" }, { "Bass to treble blend", "spectrum" } });
+    AddNumber      (form, "audio", "sensitivity",  "Sensitivity",   10, 400, " %");
+    AddNumber      (form, "audio", "floor",        "Minimum brightness", 0, 100, " %");
+    AddNumber      (form, "audio", "effect_speed", "Effect speed",  0, 255, "");
 
-    form = AddGroup(content, "System Monitor", "First color at or below Low, second at or above High, blended in between.");
-    AddChoice      (form, "system", "source",      "Source",          { { "CPU load", "cpu" }, { "RAM usage", "ram" }, { "GPU load (3D)", "gpu" } });
-    AddEffectChoice(form, "system", "base_effect", "Firmware effect");
-    AddNumber      (form, "system", "low",         "Low",             0, 100, " %");
-    AddNumber      (form, "system", "high",        "High",            0, 100, " %");
-    AddNumber      (form, "system", "smoothing",   "Smoothing",       0, 95,  " %");
+    form = AddGroup(content, "System Monitor", "Low color at or below the low threshold, high color at or above the high one, blended in between.");
+    AddChoice      (form, "system", "source",       "Source",       { { "CPU load", "cpu" }, { "RAM usage", "ram" }, { "GPU load (3D)", "gpu" } });
+    AddEffectChoice(form, "system", "base_effect",  "Firmware effect");
+    AddNumber      (form, "system", "brightness",   "Brightness",   0, 100, " %");
+    AddColor       (form, "system", "low_color",    "Low color");
+    AddColor       (form, "system", "high_color",   "High color");
+    AddNumber      (form, "system", "low",          "Low",          0, 100, " %");
+    AddNumber      (form, "system", "high",         "High",         0, 100, " %");
+    AddNumber      (form, "system", "smoothing",    "Smoothing",    0, 95,  " %");
+    AddNumber      (form, "system", "effect_speed", "Effect speed", 0, 255, "");
 
-    form = AddGroup(content, "Effect Playlist", "Mode speed is the effect speed; mode color is the default entry color.");
+    form = AddGroup(content, "Effect Playlist", "The default color is used by entries without their own color.");
     AddPlaylistQueue(form, "playlist", "effects");
-    AddNumber      (form, "playlist", "duration_s", "Show each for", 1, 3600, " s");
-    AddNumber      (form, "playlist", "fade_ms",    "Fade",          0, 5000, " ms");
-    AddCheck       (form, "playlist", "shuffle",    "Shuffle");
-    AddCheck       (form, "playlist", "random_hue", "Random color for entries without one");
+    AddNumber      (form, "playlist", "brightness",   "Brightness",     0, 100, " %");
+    AddColor       (form, "playlist", "color",        "Default color");
+    AddNumber      (form, "playlist", "duration_s",   "Show each for",  1, 3600, " s");
+    AddNumber      (form, "playlist", "fade_ms",      "Fade",           0, 5000, " ms");
+    AddNumber      (form, "playlist", "effect_speed", "Effect speed",   0, 255, "");
+    AddCheck       (form, "playlist", "shuffle",      "Shuffle");
+    AddCheck       (form, "playlist", "random_hue",   "Random color for entries without one");
 
-    form = AddGroup(content, "Day / Night", "Colors: day, night. Mode brightness is the day brightness.");
+    form = AddGroup(content, "Day / Night", "Switches between the day and night look, with a gradual transition after each start time.");
     AddEffectChoice(form, "daynight", "base_effect",      "Firmware effect");
+    AddNumber      (form, "daynight", "brightness",       "Day brightness",   0, 100, " %");
+    AddNumber      (form, "daynight", "night_brightness", "Night brightness", 0, 100, " %");
+    AddColor       (form, "daynight", "day_color",        "Day color");
+    AddColor       (form, "daynight", "night_color",      "Night color");
     AddTime        (form, "daynight", "day_start",        "Day starts");
     AddTime        (form, "daynight", "night_start",      "Night starts");
     AddNumber      (form, "daynight", "transition_min",   "Transition",       0, 240, " min");
-    AddNumber      (form, "daynight", "night_brightness", "Night brightness", 0, 100, " %");
+    AddNumber      (form, "daynight", "effect_speed",     "Effect speed",     0, 255, "");
 
     content_layout->addStretch();
 
@@ -262,4 +282,31 @@ void ViaSettingsWidget::AddPlaylistQueue(QFormLayout* form, const char* section,
     });
 
     form->addRow(editor);
+}
+
+void ViaSettingsWidget::AddColor(QFormLayout* form, const char* section, const char* key, const char* label)
+{
+    QPushButton*    swatch  = new QPushButton();
+    QString         current = QString::fromStdString(settings->GetSection(section).value(key, "#ffffff"));
+
+    swatch->setFixedWidth(COLOR_SWATCH_WIDTH);
+    swatch->setStyleSheet(QString("background-color: %1;").arg(current));
+
+    connect(swatch, &QPushButton::clicked, this, [this, swatch, section, key, label]
+    {
+        QColor initial = QColor(QString::fromStdString(settings->GetSection(section).value(key, "#ffffff")));
+        QColor picked  = QColorDialog::getColor(initial, this, via_tr(label));
+
+        if(!picked.isValid())
+        {
+            return;
+        }
+
+        QString name = picked.name(QColor::HexRgb);
+
+        swatch->setStyleSheet(QString("background-color: %1;").arg(name));
+        Store(section, key, name.toStdString());
+    });
+
+    form->addRow(via_tr(label), swatch);
 }

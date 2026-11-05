@@ -69,42 +69,19 @@ static mode via_build_effect_mode(const via_device_entry* entry, unsigned char e
     return(Effect);
 }
 
-/*---------------------------------------------------------*\
-| Custom effects are host-driven: nothing to save to the    |
-| keyboard, so no MODE_FLAG_MANUAL_SAVE. They start at full |
-| brightness rather than the keyboard's current one, which  |
-| may be a leftover dimmed state of an earlier session.     |
+/*---------------------------------------------------------*| Custom effects are configured only in the plugin settings |
+| tab. Without flags OpenRGB greys out every control of the |
+| mode (brightness, speed, colors, save), so nothing on the |
+| Devices tab can disagree with the settings tab.           |
 \*---------------------------------------------------------*/
-static mode via_build_custom_mode(const via_custom_effect_desc* desc, unsigned int custom_idx, const via_rgb_state& current)
+static mode via_build_custom_mode(const via_custom_effect_desc* desc, unsigned int custom_idx)
 {
     mode Custom;
 
-    Custom.name             = desc->name;
-    Custom.value            = (int)custom_idx;
-    Custom.flags            = desc->flags | MODE_FLAG_HAS_BRIGHTNESS;
-    Custom.brightness_min   = VIA_VALUE_MIN;
-    Custom.brightness_max   = VIA_VALUE_MAX;
-    Custom.brightness       = VIA_VALUE_MAX;
-    Custom.color_mode       = MODE_COLORS_NONE;
-
-    if(desc->flags & MODE_FLAG_HAS_SPEED)
-    {
-        Custom.speed_min    = desc->speed_min;
-        Custom.speed_max    = desc->speed_max;
-        Custom.speed        = (desc->speed_default != 0) ? desc->speed_default : current.speed;
-    }
-
-    if(desc->colors_count > 0)
-    {
-        Custom.color_mode   = MODE_COLORS_MODE_SPECIFIC;
-        Custom.colors_min   = desc->colors_count;
-        Custom.colors_max   = desc->colors_count;
-
-        for(unsigned int color_idx = 0; color_idx < desc->colors_count; color_idx++)
-        {
-            Custom.colors.push_back(desc->colors_default[color_idx]);
-        }
-    }
+    Custom.name         = desc->name;
+    Custom.value        = (int)custom_idx;
+    Custom.flags        = 0;
+    Custom.color_mode   = MODE_COLORS_NONE;
 
     return(Custom);
 }
@@ -128,7 +105,7 @@ std::vector<mode> via_build_modes(const via_device_entry* entry, unsigned char m
 
     for(unsigned int custom_idx = 0; custom_idx < via_custom_effect_count; custom_idx++)
     {
-        modes.push_back(via_build_custom_mode(&via_custom_effects[custom_idx], custom_idx, current));
+        modes.push_back(via_build_custom_mode(&via_custom_effects[custom_idx], custom_idx));
     }
 
     return(modes);

@@ -3,7 +3,7 @@
 |                                                           |
 |   Queue editor for the Effect Playlist: add, remove and   |
 |   reorder entries; each entry has an effect, its own      |
-|   duration (0 = playlist default) and an optional color.  |
+|   duration and color (empty = playlist defaults).         |
 |   Reports the whole queue as JSON on every change.        |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
@@ -23,7 +23,7 @@ typedef struct
 {
     std::string     effect;
     int             duration_s;
-    std::string     color;      /* "#RRGGBB", empty = mode color */
+    std::string     color;      /* "#RRGGBB", empty = playlist default */
 } via_playlist_item;
 
 class ViaPlaylistEditor : public QWidget

@@ -10,6 +10,8 @@
 
 #define VIA_SETTINGS_KEY                "VIARGBMatrixPlugin"
 
+/*---------------------------------------------------------*| Brightness in percent, speeds 0-255, colors "#RRGGBB"     |
+\*---------------------------------------------------------*/
 static nlohmann::json via_settings_defaults()
 {
     return(nlohmann::json
@@ -17,44 +19,61 @@ static nlohmann::json via_settings_defaults()
         { "hue_cycle",
             {
                 { "base_effect",        "Solid Splash" },
+                { "brightness",         100 },
                 { "saturation",         255 },
                 { "effect_speed",       128 },
+                { "hue_speed",          20 },
             }
         },
         { "audio",
             {
                 { "base_effect",        "Solid Color" },
+                { "brightness",         100 },
+                { "bass_color",         "#ff0040" },
+                { "treble_color",       "#0080ff" },
                 { "target",             "brightness" },
                 { "color_mode",         "fixed" },
                 { "sensitivity",        100 },
                 { "floor",              5 },
+                { "effect_speed",       128 },
             }
         },
         { "system",
             {
                 { "source",             "cpu" },
                 { "base_effect",        "Solid Color" },
+                { "brightness",         100 },
+                { "low_color",          "#00ff00" },
+                { "high_color",         "#ff0000" },
                 { "low",                10 },
                 { "high",               90 },
                 { "smoothing",          60 },
+                { "effect_speed",       128 },
             }
         },
         { "playlist",
             {
                 { "effects",            nlohmann::json::array() },
+                { "brightness",         100 },
+                { "color",              "#c600ff" },
                 { "duration_s",         30 },
                 { "fade_ms",            600 },
                 { "shuffle",            false },
                 { "random_hue",         false },
+                { "effect_speed",       128 },
             }
         },
         { "daynight",
             {
                 { "base_effect",        "Solid Color" },
+                { "brightness",         100 },
+                { "night_brightness",   25 },
+                { "day_color",          "#fff4e5" },
+                { "night_color",        "#ff6010" },
                 { "day_start",          "07:00" },
                 { "night_start",        "22:00" },
                 { "transition_min",     30 },
-                { "night_brightness",   25 },
+                { "effect_speed",       128 },
             }
         },
     });

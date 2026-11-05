@@ -11,19 +11,19 @@ Per-key lighting is not possible with stock VIA firmware.
 
 ## Custom effects
 
-Listed after the hardware effects in the mode list. Brightness, speed and colors are the normal per-mode controls on the Devices tab; the other options are under **Settings → VIA RGB Matrix** and apply immediately.
+Listed after the hardware effects in the mode list. They are set up only under **Settings → VIA RGB Matrix** — brightness, colors and speeds included; on the Devices tab their controls are inactive. Changes apply immediately.
 
-| Mode | What it does | Mode controls | Extra options |
-|---|---|---|---|
-| Hue Cycle | Walks the hue of a firmware effect round the color wheel; reactive effects (Solid Splash, Reactive Simple) make every keypress a new color | speed = cycle time | firmware effect, saturation, effect speed |
-| Audio Reactive | Bass from the default output device pulses brightness and/or effect speed | speed = resting effect speed; colors: bass, treble | firmware effect, what bass drives, fixed or bass→treble color, sensitivity, minimum brightness |
-| System Monitor | Colors a firmware effect by CPU, RAM or GPU (3D) load | colors: low, high | source, firmware effect, low/high thresholds, smoothing |
-| Effect Playlist | Cycles through firmware effects with a brightness fade between them | speed = effect speed; color | effects, duration, fade, shuffle, random color |
-| Day / Night | Day color and brightness by day, night color and dimmed brightness by night, with a gradual transition | brightness = day; colors: day, night | firmware effect, day/night start, transition, night brightness |
+| Mode | What it does | Options |
+|---|---|---|
+| Hue Cycle | Walks the hue of a firmware effect round the color wheel; reactive effects (Solid Splash, Reactive Multiwide) make every keypress a new color | firmware effect, brightness, saturation, effect speed, hue speed |
+| Audio Reactive | Bass from the default output device pulses brightness and/or effect speed | firmware effect, brightness, bass/treble colors, what bass drives, fixed or bass→treble color, sensitivity, minimum brightness, effect speed |
+| System Monitor | Colors a firmware effect by CPU, RAM or GPU (3D) load | source, firmware effect, brightness, low/high colors and thresholds, smoothing, effect speed |
+| Effect Playlist | Plays a queue of firmware effects with a brightness fade between them; each entry can have its own duration and color | queue, brightness, default color, duration, fade, effect speed, shuffle, random color |
+| Day / Night | Day look by day, night look by night, with a gradual transition | firmware effect, day/night brightness and colors, start times, transition, effect speed |
 
 The settings tab follows the OpenRGB interface language (English and Russian for now). Mode names stay in English: OpenRGB matches profile modes and "Direct" by name.
 
-Custom effects are driven by the PC and stop when OpenRGB closes; the keyboard then keeps its last state until it is unplugged. Their effect thread only runs while one of them is selected, and wakes as rarely as the effect allows (60 Hz for audio, 2 Hz for system load, once a minute for day/night).
+Custom effects and Direct are driven by the PC; when OpenRGB closes the keyboard goes back to the firmware effect it showed before. Their effect thread only runs while one of them is selected, and wakes as rarely as the effect allows (60 Hz for audio, 2 Hz for system load, once a minute for day/night).
 
 ## Compatibility
 

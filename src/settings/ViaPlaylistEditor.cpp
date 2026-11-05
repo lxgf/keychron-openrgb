@@ -88,7 +88,7 @@ ViaPlaylistEditor::ViaPlaylistEditor(const std::vector<std::string>& names, cons
     buttons->addWidget(up_button);
     buttons->addWidget(down_button);
 
-    QLabel* hint = new QLabel(via_tr("Empty queue plays every effect. Duration 0 uses \"Show each for\"; no color uses the mode color (or a random one)."));
+    QLabel* hint = new QLabel(via_tr("Empty queue plays every effect. Default duration is \"Show each for\"; default color is the playlist's \"Default color\" (or a random one)."));
     hint->setWordWrap(true);
 
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -167,7 +167,7 @@ void ViaPlaylistEditor::Rebuild(int select_row)
 
         if(items[row].color.empty())
         {
-            swatch->setText(via_tr("mode"));
+            swatch->setText(via_tr("shared"));
         }
         else
         {

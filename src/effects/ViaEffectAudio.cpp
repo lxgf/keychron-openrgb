@@ -3,12 +3,12 @@
 |                                                           |
 |   Drives a firmware effect from what is playing:          |
 |   - target "brightness": bass pulses the brightness       |
-|     between "floor" % and the mode brightness             |
-|   - target "speed": bass pushes the effect speed from the |
-|     mode speed towards maximum                            |
+|     between "floor" % and "brightness"                    |
+|   - target "speed": bass pushes the effect speed from     |
+|     "effect_speed" towards maximum                        |
 |   - target "both": both of the above                      |
-|   Color: "fixed" uses colors[0]; "spectrum" blends from   |
-|   colors[0] (bass-heavy) to colors[1] (treble-heavy).     |
+|   Color: "fixed" uses "bass_color"; "spectrum" blends     |
+|   from "bass_color" to "treble_color" as treble grows.    |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
@@ -35,6 +35,10 @@ public:
         spectrum        = false;
         sensitivity     = 1.0f;
         floor_level     = 0.05f;
+        brightness      = 255;
+        effect_speed    = 128;
+        bass_color      = ToRGBColor(255, 0, 64);
+        treble_color    = ToRGBColor(0, 128, 255);
         last_ms         = 0;
         retry_at_ms     = 0;
         warned          = false;
@@ -50,6 +54,10 @@ public:
         spectrum        = (settings.value("color_mode", "fixed") == "spectrum");
         sensitivity     = settings.value("sensitivity", 100) / 100.0f;
         floor_level     = settings.value("floor", 5) / 100.0f;
+        brightness      = via_setting_brightness(settings, "brightness");
+        effect_speed    = via_setting_speed(settings, "effect_speed");
+        bass_color      = via_setting_color(settings, "bass_color",   ToRGBColor(255, 0, 64));
+        treble_color    = via_setting_color(settings, "treble_color", ToRGBColor(0, 128, 255));
     }
 
     void Start(const via_rgb_state& /*current*/) override
@@ -58,7 +66,7 @@ public:
         retry_at_ms = 0;
     }
 
-    unsigned int Tick(unsigned long long now_ms, const via_effect_params& params, via_rgb_state* state) override
+    unsigned int Tick(unsigned long long now_ms, via_rgb_state* state) override
     {
         float bass      = 0.0f;
         float treble    = 0.0f;
@@ -98,16 +106,16 @@ public:
             | The bias keeps near-silence on the first      |
             | color instead of flickering on noise          |
             \*---------------------------------------------*/
-            via_blend_hue_sat(params.colors[0], params.colors[1], treble / (bass + treble + AUDIO_SPECTRUM_BIAS), &state->hue, &state->sat);
+            via_blend_hue_sat(bass_color, treble_color, treble / (bass + treble + AUDIO_SPECTRUM_BIAS), &state->hue, &state->sat);
         }
         else
         {
-            via_blend_hue_sat(params.colors[0], params.colors[0], 0.0f, &state->hue, &state->sat);
+            via_blend_hue_sat(bass_color, bass_color, 0.0f, &state->hue, &state->sat);
         }
 
         state->effect       = base_effect;
-        state->brightness   = drive_bright ? (unsigned char)(params.brightness * (floor_level + (1.0f - floor_level) * level)) : params.brightness;
-        state->speed        = drive_speed  ? (unsigned char)(params.speed + (AUDIO_SPEED_MAX - params.speed) * level)          : params.speed;
+        state->brightness   = drive_bright ? (unsigned char)(brightness * (floor_level + (1.0f - floor_level) * level)) : brightness;
+        state->speed        = drive_speed  ? (unsigned char)(effect_speed + (AUDIO_SPEED_MAX - effect_speed) * level)          : effect_speed;
 
         return(capture.IsOpen() ? AUDIO_TICK_MS : AUDIO_RETRY_MS);
     }
@@ -126,6 +134,10 @@ private:
     bool                spectrum;
     float               sensitivity;
     float               floor_level;
+    unsigned char       brightness;
+    unsigned char       effect_speed;
+    RGBColor            bass_color;
+    RGBColor            treble_color;
     unsigned long long  last_ms;
     unsigned long long  retry_at_ms;
     bool                warned;

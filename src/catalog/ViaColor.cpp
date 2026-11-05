@@ -10,6 +10,7 @@
 \*---------------------------------------------------------*/
 
 #include <cmath>
+#include <cstdio>
 #include "ViaColor.h"
 
 void via_rgb_to_hsv(RGBColor color, unsigned char* hue, unsigned char* sat, unsigned char* val)
@@ -115,4 +116,20 @@ void via_blend_hue_sat(RGBColor from, RGBColor to, float t, unsigned char* hue, 
 
     *hue = (unsigned char)(((int)lroundf(from_hue + hue_delta * t) + 256) & 0xFF);
     *sat = (unsigned char)lroundf(from_sat + ((int)to_sat - (int)from_sat) * t);
+}
+
+bool via_parse_color(const std::string& text, RGBColor* color)
+{
+    unsigned int red;
+    unsigned int green;
+    unsigned int blue;
+
+    if(text.size() != 7 || sscanf(text.c_str(), "#%2x%2x%2x", &red, &green, &blue) != 3)
+    {
+        return(false);
+    }
+
+    *color = ToRGBColor(red, green, blue);
+
+    return(true);
 }

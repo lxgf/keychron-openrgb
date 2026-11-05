@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <string>
 #include "RGBControllerInterface.h"
 
 /*---------------------------------------------------------*\
@@ -22,3 +23,8 @@ RGBColor    via_hsv_to_rgb(unsigned char hue, unsigned char sat, unsigned char v
 | t = 0 gives from, t = 1 gives to                          |
 \*---------------------------------------------------------*/
 void        via_blend_hue_sat(RGBColor from, RGBColor to, float t, unsigned char* hue, unsigned char* sat);
+
+/*---------------------------------------------------------*\
+| "#RRGGBB" to color; false if the text is not one          |
+\*---------------------------------------------------------*/
+bool        via_parse_color(const std::string& text, RGBColor* color);

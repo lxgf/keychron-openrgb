@@ -81,7 +81,7 @@ bool RGBController_ViaRGBMatrix::Register()
     RGBController_Setup setup{};
     setup.name                  = device_entry->name;
     setup.vendor                = device_entry->vendor;
-    setup.description           = "QMK/VIA RGB Matrix keyboard (stock firmware)";
+    setup.description           = "QMK/VIA RGB Matrix keyboard (stock firmware). Custom modes are set up in Settings > VIA RGB Matrix.";
     setup.version               = version;
     setup.serial                = controller->GetSerial();
     setup.location              = controller->GetLocation();
@@ -216,20 +216,8 @@ void RGBController_ViaRGBMatrix::ApplyFirmwareEffect(int mode_idx, bool save)
 
 void RGBController_ViaRGBMatrix::RunCustomEffect(int mode_idx)
 {
-    via_effect_params   params;
-    unsigned int        color_count = rgb_controller->GetModeColorsCount(mode_idx);
-
     EnterHostDriven();
-
-    params.brightness   = (unsigned char)rgb_controller->GetModeBrightness(mode_idx);
-    params.speed        = (unsigned char)rgb_controller->GetModeSpeed(mode_idx);
-
-    for(unsigned int color_idx = 0; color_idx < VIA_EFFECT_MAX_COLORS; color_idx++)
-    {
-        params.colors[color_idx] = (color_idx < color_count) ? rgb_controller->GetModeColor(mode_idx, color_idx) : 0;
-    }
-
-    engine.Run((unsigned int)(mode_idx - via_first_custom_mode(max_effect)), params);
+    engine.Run((unsigned int)(mode_idx - via_first_custom_mode(max_effect)));
 }
 
 void RGBController_ViaRGBMatrix::DeviceUpdateLEDsCallback(void* object)

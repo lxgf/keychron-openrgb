@@ -2,9 +2,8 @@
 | ViaEffectSystemMonitor.cpp                                |
 |                                                           |
 |   Tints a firmware effect by CPU, RAM or GPU load:        |
-|   colors[0] at or below "low" %, colors[1] at or above    |
-|   "high" %, blended in between. Mode speed is the effect  |
-|   speed.                                                  |
+|   "low_color" at or below "low" %, "high_color" at or     |
+|   above "high" %, blended in between.                     |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
@@ -20,25 +19,33 @@ class ViaEffectSystemMonitor : public ViaCustomEffect
 public:
     ViaEffectSystemMonitor(const via_effect_context& effect_context)
     {
-        context     = effect_context;
-        base_effect = VIA_EFFECT_SOLID_COLOR;
-        sensor      = VIA_SENSOR_CPU;
-        low         = 10.0f;
-        high        = 90.0f;
-        smoothing   = 0.6f;
-        value       = -1.0f;
+        context         = effect_context;
+        base_effect     = VIA_EFFECT_SOLID_COLOR;
+        brightness      = 255;
+        effect_speed    = 128;
+        low_color       = ToRGBColor(0, 255, 0);
+        high_color      = ToRGBColor(255, 0, 0);
+        sensor          = VIA_SENSOR_CPU;
+        low             = 10.0f;
+        high            = 90.0f;
+        smoothing       = 0.6f;
+        value           = -1.0f;
     }
 
     void Configure(const nlohmann::json& settings) override
     {
         std::string source = settings.value("source", "cpu");
 
-        base_effect = via_resolve_effect(context, settings.value("base_effect", "Solid Color"));
-        sensor      = (source == "ram") ? VIA_SENSOR_RAM : (source == "gpu") ? VIA_SENSOR_GPU : VIA_SENSOR_CPU;
-        low         = (float)settings.value("low", 10);
-        high        = (float)settings.value("high", 90);
-        smoothing   = settings.value("smoothing", 60) / 100.0f;
-        value       = -1.0f;
+        base_effect     = via_resolve_effect(context, settings.value("base_effect", "Solid Color"));
+        brightness      = via_setting_brightness(settings, "brightness");
+        effect_speed    = via_setting_speed(settings, "effect_speed");
+        low_color       = via_setting_color(settings, "low_color",  ToRGBColor(0, 255, 0));
+        high_color      = via_setting_color(settings, "high_color", ToRGBColor(255, 0, 0));
+        sensor          = (source == "ram") ? VIA_SENSOR_RAM : (source == "gpu") ? VIA_SENSOR_GPU : VIA_SENSOR_CPU;
+        low             = (float)settings.value("low", 10);
+        high            = (float)settings.value("high", 90);
+        smoothing       = settings.value("smoothing", 60) / 100.0f;
+        value           = -1.0f;
     }
 
     void Start(const via_rgb_state& /*current*/) override
@@ -46,7 +53,7 @@ public:
         value = -1.0f;
     }
 
-    unsigned int Tick(unsigned long long /*now_ms*/, const via_effect_params& params, via_rgb_state* state) override
+    unsigned int Tick(unsigned long long /*now_ms*/, via_rgb_state* state) override
     {
         float sample = sensors.Read(sensor);
 
@@ -54,11 +61,11 @@ public:
 
         float range = (high > low) ? (high - low) : 1.0f;
 
-        via_blend_hue_sat(params.colors[0], params.colors[1], (value - low) / range, &state->hue, &state->sat);
+        via_blend_hue_sat(low_color, high_color, (value - low) / range, &state->hue, &state->sat);
 
         state->effect       = base_effect;
-        state->brightness   = params.brightness;
-        state->speed        = params.speed;
+        state->brightness   = brightness;
+        state->speed        = effect_speed;
 
         return(SYSTEM_MONITOR_TICK_MS);
     }
@@ -67,6 +74,10 @@ private:
     via_effect_context  context;
     ViaSystemSensors    sensors;
     unsigned char       base_effect;
+    unsigned char       brightness;
+    unsigned char       effect_speed;
+    RGBColor            low_color;
+    RGBColor            high_color;
     int                 sensor;
     float               low;
     float               high;

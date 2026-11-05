@@ -1,9 +1,9 @@
 /*---------------------------------------------------------*\
 | ViaEffectDayNight.cpp                                     |
 |                                                           |
-|   Day color/brightness by day, night color and dimmed     |
-|   brightness by night, with a linear transition after    |
-|   each switch time. Colors: [0] day, [1] night.           |
+|   Day color and brightness by day, night color and night  |
+|   brightness by night, with a linear transition after     |
+|   each switch time.                                       |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
@@ -42,26 +42,34 @@ public:
     {
         context             = effect_context;
         base_effect         = VIA_EFFECT_SOLID_COLOR;
+        day_brightness      = 255;
+        night_brightness    = 64;
+        effect_speed        = 128;
+        day_color           = ToRGBColor(255, 244, 229);
+        night_color         = ToRGBColor(255, 96, 16);
         day_start           = 7 * 60;
         night_start         = 22 * 60;
         transition          = 30;
-        night_brightness    = 25;
     }
 
     void Configure(const nlohmann::json& settings) override
     {
         base_effect         = via_resolve_effect(context, settings.value("base_effect", "Solid Color"));
+        day_brightness      = via_setting_brightness(settings, "brightness");
+        night_brightness    = via_setting_brightness(settings, "night_brightness");
+        effect_speed        = via_setting_speed(settings, "effect_speed");
+        day_color           = via_setting_color(settings, "day_color",   ToRGBColor(255, 244, 229));
+        night_color         = via_setting_color(settings, "night_color", ToRGBColor(255, 96, 16));
         day_start           = parse_minutes(settings.value("day_start", "07:00"), 7 * 60);
         night_start         = parse_minutes(settings.value("night_start", "22:00"), 22 * 60);
         transition          = settings.value("transition_min", 30);
-        night_brightness    = settings.value("night_brightness", 25);
     }
 
     void Start(const via_rgb_state& /*current*/) override
     {
     }
 
-    unsigned int Tick(unsigned long long /*now_ms*/, const via_effect_params& params, via_rgb_state* state) override
+    unsigned int Tick(unsigned long long /*now_ms*/, via_rgb_state* state) override
     {
         SYSTEMTIME local_time;
         GetLocalTime(&local_time);
@@ -71,14 +79,11 @@ public:
         float   night       = NightAmount(now, now_minute);
         bool    in_ramp     = (transition > 0) && (minutes_since(now_minute, night_start) < transition || minutes_since(now_minute, day_start) < transition);
 
-        float   day_bri     = params.brightness;
-        float   night_bri   = params.brightness * night_brightness / 100.0f;
-
-        via_blend_hue_sat(params.colors[0], params.colors[1], night, &state->hue, &state->sat);
+        via_blend_hue_sat(day_color, night_color, night, &state->hue, &state->sat);
 
         state->effect       = base_effect;
-        state->brightness   = (unsigned char)(day_bri + (night_bri - day_bri) * night);
-        state->speed        = params.speed;
+        state->brightness   = (unsigned char)(day_brightness + ((float)night_brightness - day_brightness) * night);
+        state->speed        = effect_speed;
 
         return(in_ramp ? DAY_NIGHT_TICK_TRANSITION_MS : DAY_NIGHT_TICK_STEADY_MS);
     }
@@ -86,10 +91,14 @@ public:
 private:
     via_effect_context  context;
     unsigned char       base_effect;
+    unsigned char       day_brightness;
+    unsigned char       night_brightness;
+    unsigned char       effect_speed;
+    RGBColor            day_color;
+    RGBColor            night_color;
     int                 day_start;
     int                 night_start;
     int                 transition;
-    int                 night_brightness;
 
     /*-----------------------------------------------------*\
     | 0 = full day, 1 = full night                          |

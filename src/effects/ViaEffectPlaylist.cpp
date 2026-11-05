@@ -3,11 +3,10 @@
 |                                                           |
 |   Plays a queue of firmware effects. Each entry has its   |
 |   own duration (0 = the playlist default) and optional    |
-|   color (else random or the mode color). Each switch      |
+|   color (else random or "color"). Each switch             |
 |   fades the brightness out, changes the effect while dark |
 |   and fades back in, which also hides the firmware's      |
-|   restart of the new animation. Mode speed is the effect  |
-|   speed.                                                  |
+|   restart of the new animation.                           |
 |                                                           |
 |   Settings "effects": [ { "effect": name,                 |
 |                           "duration_s": n,                |
@@ -17,7 +16,6 @@
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
 
-#include <cstdio>
 #include <random>
 #include <vector>
 #include "ViaColor.h"
@@ -41,22 +39,6 @@ typedef struct
     RGBColor        color;
 } playlist_entry;
 
-static bool parse_color(const std::string& text, RGBColor* color)
-{
-    unsigned int red;
-    unsigned int green;
-    unsigned int blue;
-
-    if(text.size() != 7 || sscanf(text.c_str(), "#%2x%2x%2x", &red, &green, &blue) != 3)
-    {
-        return(false);
-    }
-
-    *color = ToRGBColor(red, green, blue);
-
-    return(true);
-}
-
 class ViaEffectPlaylist : public ViaCustomEffect
 {
 public:
@@ -68,6 +50,9 @@ public:
         fade_ms         = 600;
         shuffle         = false;
         random_hue      = false;
+        brightness      = 255;
+        effect_speed    = 128;
+        default_color   = ToRGBColor(198, 0, 255);
         position        = 0;
         phase           = PLAYLIST_SHOWING;
         phase_start_ms  = 0;
@@ -94,7 +79,7 @@ public:
             {
                 name                = queue[queue_idx].value("effect", "");
                 entry.duration_ms   = (unsigned int)queue[queue_idx].value("duration_s", 0) * 1000;
-                entry.has_color     = parse_color(queue[queue_idx].value("color", ""), &entry.color);
+                entry.has_color     = via_parse_color(queue[queue_idx].value("color", ""), &entry.color);
             }
 
             int effect_id = via_find_effect(context.entry, context.max_effect, name);
@@ -122,6 +107,9 @@ public:
         fade_ms     = settings.value("fade_ms", 600);
         shuffle     = settings.value("shuffle", false);
         random_hue  = settings.value("random_hue", false);
+        brightness      = via_setting_brightness(settings, "brightness");
+        effect_speed    = via_setting_speed(settings, "effect_speed");
+        default_color   = via_setting_color(settings, "color", ToRGBColor(198, 0, 255));
 
         if(position >= entries.size())
         {
@@ -136,7 +124,7 @@ public:
         phase_start_ms  = 0;
     }
 
-    unsigned int Tick(unsigned long long now_ms, const via_effect_params& params, via_rgb_state* state) override
+    unsigned int Tick(unsigned long long now_ms, via_rgb_state* state) override
     {
         if(phase_start_ms == 0)
         {
@@ -156,7 +144,7 @@ public:
                 if(elapsed >= show_ms)
                 {
                     Advance(now_ms, half_fade > 0 ? PLAYLIST_FADING_OUT : PLAYLIST_FADING_IN);
-                    return(Tick(now_ms, params, state));
+                    return(Tick(now_ms, state));
                 }
                 wait_ms = show_ms - elapsed;
                 break;
@@ -200,12 +188,12 @@ public:
         }
         else
         {
-            via_blend_hue_sat(params.colors[0], params.colors[0], 0.0f, &state->hue, &state->sat);
+            via_blend_hue_sat(default_color, default_color, 0.0f, &state->hue, &state->sat);
         }
 
         state->effect       = entry.effect;
-        state->brightness   = (unsigned char)(params.brightness * level);
-        state->speed        = params.speed;
+        state->brightness   = (unsigned char)(brightness * level);
+        state->speed        = effect_speed;
 
         return(wait_ms);
     }
@@ -217,6 +205,9 @@ private:
     unsigned int                fade_ms;
     bool                        shuffle;
     bool                        random_hue;
+    unsigned char               brightness;
+    unsigned char               effect_speed;
+    RGBColor                    default_color;
     std::size_t                 position;
     int                         phase;
     unsigned long long          phase_start_ms;

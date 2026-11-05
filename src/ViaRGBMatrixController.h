@@ -41,41 +41,44 @@ enum
     VIA_RGB_MATRIX_COLOR                = 0x04,
 };
 
+typedef struct
+{
+    unsigned char   effect;
+    unsigned char   brightness;
+    unsigned char   speed;
+    unsigned char   hue;
+    unsigned char   sat;
+} via_rgb_state;
+
 class ViaRGBMatrixController
 {
 public:
-    ViaRGBMatrixController(hid_device* dev_handle, const char* path);
+    ViaRGBMatrixController(hid_device* dev_handle, const char* dev_path);
     ~ViaRGBMatrixController();
 
-    std::string     GetLocation();
-    std::string     GetPath();
-    std::string     GetSerial();
-    unsigned short  GetProtocolVersion();
+    const std::string&  GetPath();
+    std::string         GetLocation();
+    std::string         GetSerial();
+    unsigned short      GetProtocolVersion();
 
-    bool            Handshake();
+    bool                Handshake();
+    bool                ReadState(via_rgb_state* state);
+    bool                ProbeMaxEffect(unsigned char* max_effect);
 
-    bool            GetBrightness(unsigned char* brightness);
-    bool            GetEffect(unsigned char* effect);
-    bool            GetSpeed(unsigned char* speed);
-    bool            GetColor(unsigned char* hue, unsigned char* sat);
-
-    bool            SetBrightness(unsigned char brightness);
-    bool            SetEffect(unsigned char effect);
-    bool            SetSpeed(unsigned char speed);
-    bool            SetColor(unsigned char hue, unsigned char sat);
-
-    bool            Save();
-
-    bool            ProbeMaxEffect(unsigned char* max_effect);
+    bool                SetBrightness(unsigned char brightness);
+    bool                SetEffect(unsigned char effect);
+    bool                SetSpeed(unsigned char speed);
+    bool                SetColor(unsigned char hue, unsigned char sat);
+    bool                Save();
 
 private:
-    hid_device*     dev;
-    std::string     path;
-    std::string     serial;
-    unsigned short  protocol_version;
-    std::mutex      transfer_lock;
+    hid_device*         dev;
+    std::string         path;
+    unsigned short      protocol_version;
+    bool                needs_resync;
+    std::mutex          transfer_lock;
 
-    bool            Transfer(unsigned char* data);
-    bool            GetValue(unsigned char value_id, unsigned char* out, unsigned int count);
-    bool            SetValue(unsigned char value_id, const unsigned char* in, unsigned int count);
+    bool                Transfer(unsigned char* data);
+    bool                GetValue(unsigned char value_id, unsigned char* out, unsigned int count);
+    bool                SetValue(unsigned char value_id, const unsigned char* in, unsigned int count);
 };

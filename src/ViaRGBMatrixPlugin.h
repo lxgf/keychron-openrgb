@@ -12,6 +12,7 @@
 #include <QObject>
 #include "OpenRGBPluginInterface.h"
 #include "ViaRGBMatrixDetector.h"
+#include "ViaWorker.h"
 
 class ViaRGBMatrixPlugin : public QObject, public OpenRGBPluginInterface
 {
@@ -40,5 +41,6 @@ public:
     void                SettingsManagerUpdated(unsigned int update_reason)                                  override;
 
 private:
+    ViaWorker*              worker;
     ViaRGBMatrixDetector*   detector;
 };

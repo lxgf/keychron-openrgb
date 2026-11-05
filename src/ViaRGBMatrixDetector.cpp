@@ -1,96 +1,40 @@
 /*---------------------------------------------------------*\
 | ViaRGBMatrixDetector.cpp                                  |
 |                                                           |
-|   Hotplug-driven detection of allowlisted VIA keyboards   |
+|   Hotplug-driven detection of allowlisted VIA keyboards.  |
 |                                                           |
 |   The hidapi hotplug callback runs on hidapi's own event  |
-|   thread and may not open devices, so it only queues the |
-|   event; opening, handshake and registration happen on    |
-|   the detector thread.                                    |
+|   thread and may not open devices, so it only posts a     |
+|   task; opening, handshake and registration happen on the |
+|   worker.                                                 |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
 
-#include "LogManager.h"
+#include "ViaLog.h"
 #include "ViaRGBMatrixDetector.h"
 
-#define VIA_LOG(level, ...)     plugin_api->LogEntry(__FILE__, __LINE__, level, __VA_ARGS__)
-
-ViaRGBMatrixDetector::ViaRGBMatrixDetector(OpenRGBPluginAPIInterface* api)
+ViaRGBMatrixDetector::ViaRGBMatrixDetector(OpenRGBPluginAPIInterface* api, ViaWorker* worker_ptr)
 {
     plugin_api  = api;
-    running     = false;
-}
-
-ViaRGBMatrixDetector::~ViaRGBMatrixDetector()
-{
-    Stop();
+    worker      = worker_ptr;
+    stopped     = false;
 }
 
 void ViaRGBMatrixDetector::Start()
 {
-    running         = true;
-    detector_thread = std::thread(&ViaRGBMatrixDetector::DetectorThread, this);
+    worker->Post([this]{ StartHotplug(); });
 }
 
+/*---------------------------------------------------------*\
+| Queues teardown; it has run once the worker is stopped    |
+\*---------------------------------------------------------*/
 void ViaRGBMatrixDetector::Stop()
 {
-    if(!detector_thread.joinable())
-    {
-        return;
-    }
-
-    {
-        std::lock_guard<std::mutex> guard(event_lock);
-        running = false;
-    }
-
-    event_cv.notify_one();
-    detector_thread.join();
+    worker->Post([this]{ StopAll(); });
 }
 
-int HID_API_CALL ViaRGBMatrixDetector::HotplugCallback(hid_hotplug_callback_handle /*handle*/, hid_device_info* info, hid_hotplug_event event, void* user_data)
-{
-    ViaRGBMatrixDetector* detector = (ViaRGBMatrixDetector*)user_data;
-
-    via_hotplug_event new_event;
-    new_event.arrived   = (event == HID_API_HOTPLUG_EVENT_DEVICE_ARRIVED);
-    new_event.path      = info->path;
-    new_event.entry     = NULL;
-
-    if(new_event.arrived)
-    {
-        if(info->usage_page != VIA_RAW_HID_USAGE_PAGE || info->usage != VIA_RAW_HID_USAGE)
-        {
-            return(0);
-        }
-
-        for(unsigned int device_idx = 0; device_idx < via_device_count; device_idx++)
-        {
-            if(via_devices[device_idx].vid == info->vendor_id && via_devices[device_idx].pid == info->product_id)
-            {
-                new_event.entry = &via_devices[device_idx];
-                break;
-            }
-        }
-
-        if(new_event.entry == NULL)
-        {
-            return(0);
-        }
-    }
-
-    {
-        std::lock_guard<std::mutex> guard(detector->event_lock);
-        detector->events.push_back(new_event);
-    }
-
-    detector->event_cv.notify_one();
-
-    return(0);
-}
-
-void ViaRGBMatrixDetector::DetectorThread()
+void ViaRGBMatrixDetector::StartHotplug()
 {
     /*-----------------------------------------------------*\
     | Let OpenRGB finish its own detection pass first       |
@@ -101,48 +45,30 @@ void ViaRGBMatrixDetector::DetectorThread()
     {
         hid_hotplug_callback_handle handle;
 
-        if(hid_hotplug_register_callback(via_devices[device_idx].vid, via_devices[device_idx].pid,
-                                         HID_API_HOTPLUG_EVENT_DEVICE_ARRIVED | HID_API_HOTPLUG_EVENT_DEVICE_LEFT,
-                                         HID_API_HOTPLUG_ENUMERATE, HotplugCallback, this, &handle) == 0)
+        int result = hid_hotplug_register_callback(via_devices[device_idx].vid, via_devices[device_idx].pid,
+                                                   HID_API_HOTPLUG_EVENT_DEVICE_ARRIVED | HID_API_HOTPLUG_EVENT_DEVICE_LEFT,
+                                                   HID_API_HOTPLUG_ENUMERATE, HotplugCallback, this, &handle);
+
+        if(result == 0)
         {
             hotplug_handles.push_back(handle);
         }
         else
         {
-            VIA_LOG(LL_ERROR, "[VIA RGB Matrix] Failed to register hotplug callback for %04X:%04X", via_devices[device_idx].vid, via_devices[device_idx].pid);
+            VIA_LOG(LL_ERROR, "failed to register hotplug callback for %04X:%04X", via_devices[device_idx].vid, via_devices[device_idx].pid);
         }
     }
+}
 
-    while(true)
-    {
-        via_hotplug_event event;
-
-        {
-            std::unique_lock<std::mutex> lock(event_lock);
-
-            event_cv.wait(lock, [this]{ return(!running || !events.empty()); });
-
-            if(!running)
-            {
-                break;
-            }
-
-            event = events.front();
-            events.pop_front();
-        }
-
-        if(event.arrived)
-        {
-            DeviceArrived(event);
-        }
-        else
-        {
-            DeviceLeft(event);
-        }
-    }
+void ViaRGBMatrixDetector::StopAll()
+{
+    /*-----------------------------------------------------*\
+    | Arrivals queued before deregistration are dropped     |
+    \*-----------------------------------------------------*/
+    stopped = true;
 
     /*-----------------------------------------------------*\
-    | Deregistering blocks until a running callback returns |
+    | Deregistering waits for a running callback to return  |
     \*-----------------------------------------------------*/
     for(std::size_t handle_idx = 0; handle_idx < hotplug_handles.size(); handle_idx++)
     {
@@ -151,42 +77,71 @@ void ViaRGBMatrixDetector::DetectorThread()
 
     hotplug_handles.clear();
 
-    for(std::size_t device_idx = 0; device_idx < devices.size(); device_idx++)
+    while(!devices.empty())
     {
-        delete devices[device_idx];
+        RemoveDevice(devices.size() - 1);
     }
-
-    devices.clear();
 }
 
-void ViaRGBMatrixDetector::DeviceArrived(const via_hotplug_event& event)
+int HID_API_CALL ViaRGBMatrixDetector::HotplugCallback(hid_hotplug_callback_handle /*handle*/, hid_device_info* info, hid_hotplug_event event, void* user_data)
 {
+    ViaRGBMatrixDetector*   detector    = (ViaRGBMatrixDetector*)user_data;
+    std::string             path        = info->path;
+
+    if(event == HID_API_HOTPLUG_EVENT_DEVICE_LEFT)
+    {
+        detector->worker->Post([detector, path]{ detector->DeviceLeft(path); });
+        return(0);
+    }
+
+    if(info->usage_page != VIA_RAW_HID_USAGE_PAGE || info->usage != VIA_RAW_HID_USAGE)
+    {
+        return(0);
+    }
+
+    const via_device_entry* entry = via_find_device(info->vendor_id, info->product_id);
+
+    if(entry != NULL)
+    {
+        detector->worker->Post([detector, path, entry]{ detector->DeviceArrived(path, entry); });
+    }
+
+    return(0);
+}
+
+void ViaRGBMatrixDetector::DeviceArrived(const std::string& path, const via_device_entry* entry)
+{
+    if(stopped)
+    {
+        return;
+    }
+
     for(std::size_t device_idx = 0; device_idx < devices.size(); device_idx++)
     {
-        if(devices[device_idx]->GetPath() == event.path)
+        if(devices[device_idx]->GetPath() == path)
         {
             return;
         }
     }
 
-    hid_device* dev = hid_open_path(event.path.c_str());
+    hid_device* dev = hid_open_path(path.c_str());
 
     if(dev == NULL)
     {
-        VIA_LOG(LL_WARNING, "[VIA RGB Matrix] %s: cannot open %s", event.entry->name, event.path.c_str());
+        VIA_LOG(LL_WARNING, "%s: cannot open %s", entry->name, path.c_str());
         return;
     }
 
-    ViaRGBMatrixController* controller = new ViaRGBMatrixController(dev, event.path.c_str());
+    ViaRGBMatrixController* controller = new ViaRGBMatrixController(dev, path.c_str());
 
     if(!controller->Handshake())
     {
-        VIA_LOG(LL_WARNING, "[VIA RGB Matrix] %s: no VIA handshake on %s", event.entry->name, event.path.c_str());
+        VIA_LOG(LL_WARNING, "%s: no VIA handshake on %s", entry->name, path.c_str());
         delete controller;
         return;
     }
 
-    RGBController_ViaRGBMatrix* device = new RGBController_ViaRGBMatrix(controller, event.entry, plugin_api);
+    RGBController_ViaRGBMatrix* device = new RGBController_ViaRGBMatrix(controller, entry, plugin_api, worker);
 
     if(!device->Register())
     {
@@ -197,16 +152,30 @@ void ViaRGBMatrixDetector::DeviceArrived(const via_hotplug_event& event)
     devices.push_back(device);
 }
 
-void ViaRGBMatrixDetector::DeviceLeft(const via_hotplug_event& event)
+void ViaRGBMatrixDetector::DeviceLeft(const std::string& path)
 {
     for(std::size_t device_idx = 0; device_idx < devices.size(); device_idx++)
     {
-        if(devices[device_idx]->GetPath() == event.path)
+        if(devices[device_idx]->GetPath() == path)
         {
-            VIA_LOG(LL_INFO, "[VIA RGB Matrix] Device removed: %s", event.path.c_str());
-            delete devices[device_idx];
-            devices.erase(devices.begin() + device_idx);
+            VIA_LOG(LL_INFO, "device removed: %s", path.c_str());
+            RemoveDevice(device_idx);
             return;
         }
     }
+}
+
+/*---------------------------------------------------------*\
+| Once unregistered, OpenRGB stops calling the device, but  |
+| a flush it queued may still be pending on the worker:     |
+| free it behind that flush instead of right away.          |
+\*---------------------------------------------------------*/
+void ViaRGBMatrixDetector::RemoveDevice(std::size_t device_idx)
+{
+    RGBController_ViaRGBMatrix* device = devices[device_idx];
+
+    devices.erase(devices.begin() + device_idx);
+    device->Unregister();
+
+    worker->Post([device]{ delete device; });
 }

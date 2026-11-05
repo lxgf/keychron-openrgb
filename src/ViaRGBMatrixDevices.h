@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <string>
+
 #define VIA_EFFECT_OFF                  0
 #define VIA_EFFECT_SOLID_COLOR          1
 
@@ -25,5 +27,8 @@ typedef struct
 extern const via_device_entry   via_devices[];
 extern const unsigned int       via_device_count;
 
-bool via_effect_uses_color(const char* effect_name);
-bool via_effect_uses_speed(const char* effect_name);
+const via_device_entry* via_find_device(unsigned short vid, unsigned short pid);
+
+std::string via_effect_name(const via_device_entry* entry, unsigned int effect_id);
+bool        via_effect_uses_color(const std::string& effect_name);
+bool        via_effect_uses_speed(const std::string& effect_name);

@@ -36,10 +36,20 @@ add_library(OpenRGBViaRGBMatrixPlugin SHARED
     src/ViaRGBMatrixDetector.h
     src/RGBController_ViaRGBMatrix.cpp
     src/RGBController_ViaRGBMatrix.h
+    src/ViaLightingSync.cpp
+    src/ViaLightingSync.h
+    src/ViaRGBMatrixModes.cpp
+    src/ViaRGBMatrixModes.h
     src/ViaRGBMatrixController.cpp
     src/ViaRGBMatrixController.h
     src/ViaRGBMatrixDevices.cpp
     src/ViaRGBMatrixDevices.h
+    src/ViaColor.cpp
+    src/ViaColor.h
+    src/ViaWorker.cpp
+    src/ViaWorker.h
+    src/ViaLog.cpp
+    src/ViaLog.h
 )
 
 target_include_directories(OpenRGBViaRGBMatrixPlugin PRIVATE

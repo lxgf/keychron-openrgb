@@ -7,7 +7,7 @@
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
 
-#include "LogManager.h"
+#include "ViaLog.h"
 #include "ViaRGBMatrixPlugin.h"
 
 #ifndef VIA_PLUGIN_VERSION
@@ -30,6 +30,7 @@
 
 ViaRGBMatrixPlugin::ViaRGBMatrixPlugin()
 {
+    worker   = NULL;
     detector = NULL;
 }
 
@@ -61,9 +62,13 @@ unsigned int ViaRGBMatrixPlugin::GetPluginAPIVersion()
 
 void ViaRGBMatrixPlugin::Load(OpenRGBPluginAPIInterface* plugin_api_ptr)
 {
-    plugin_api_ptr->LogEntry(__FILE__, __LINE__, LL_INFO, "[VIA RGB Matrix] Plugin %s loaded", VIA_PLUGIN_VERSION);
+    via_log_set_api(plugin_api_ptr);
+    VIA_LOG(LL_INFO, "plugin %s loaded", VIA_PLUGIN_VERSION);
 
-    detector = new ViaRGBMatrixDetector(plugin_api_ptr);
+    worker   = new ViaWorker();
+    detector = new ViaRGBMatrixDetector(plugin_api_ptr, worker);
+
+    worker->Start();
     detector->Start();
 }
 
@@ -77,13 +82,26 @@ QMenu* ViaRGBMatrixPlugin::GetTrayMenu()
     return(NULL);
 }
 
+/*---------------------------------------------------------*\
+| The DLL is unmapped right after this: every device must  |
+| be unregistered and the worker joined before returning.  |
+\*---------------------------------------------------------*/
 void ViaRGBMatrixPlugin::Unload()
 {
-    if(detector != NULL)
+    if(worker == NULL)
     {
-        delete detector;
-        detector = NULL;
+        return;
     }
+
+    detector->Stop();
+    worker->Stop();
+
+    delete detector;
+    delete worker;
+    detector = NULL;
+    worker   = NULL;
+
+    via_log_set_api(NULL);
 }
 
 void ViaRGBMatrixPlugin::OnProfileAboutToLoad()

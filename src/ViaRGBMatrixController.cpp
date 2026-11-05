@@ -8,24 +8,16 @@
 \*---------------------------------------------------------*/
 
 #include <cstring>
-#include <cwchar>
 #include "ViaRGBMatrixController.h"
+
+#define VIA_SERIAL_MAX_LENGTH           128
 
 ViaRGBMatrixController::ViaRGBMatrixController(hid_device* dev_handle, const char* dev_path)
 {
-    dev              = dev_handle;
-    path             = dev_path;
-    protocol_version = 0;
-
-    wchar_t serial_string[128];
-
-    if(hid_get_serial_number_string(dev, serial_string, 128) == 0)
-    {
-        for(unsigned int char_idx = 0; char_idx < 128 && serial_string[char_idx] != 0; char_idx++)
-        {
-            serial.push_back((char)serial_string[char_idx]);
-        }
-    }
+    dev                 = dev_handle;
+    path                = dev_path;
+    protocol_version    = 0;
+    needs_resync        = false;
 }
 
 ViaRGBMatrixController::~ViaRGBMatrixController()
@@ -33,18 +25,29 @@ ViaRGBMatrixController::~ViaRGBMatrixController()
     hid_close(dev);
 }
 
+const std::string& ViaRGBMatrixController::GetPath()
+{
+    return(path);
+}
+
 std::string ViaRGBMatrixController::GetLocation()
 {
     return("HID: " + path);
 }
 
-std::string ViaRGBMatrixController::GetPath()
-{
-    return(path);
-}
-
 std::string ViaRGBMatrixController::GetSerial()
 {
+    wchar_t     serial_string[VIA_SERIAL_MAX_LENGTH];
+    std::string serial;
+
+    if(hid_get_serial_number_string(dev, serial_string, VIA_SERIAL_MAX_LENGTH) == 0)
+    {
+        for(unsigned int char_idx = 0; char_idx < VIA_SERIAL_MAX_LENGTH && serial_string[char_idx] != 0; char_idx++)
+        {
+            serial.push_back((char)serial_string[char_idx]);
+        }
+    }
+
     return(serial);
 }
 
@@ -66,14 +69,20 @@ bool ViaRGBMatrixController::Transfer(unsigned char* data)
     std::lock_guard<std::mutex> guard(transfer_lock);
 
     /*-----------------------------------------------------*\
-    | Drop anything left over from an earlier timeout       |
+    | A late answer to a timed-out request may still be     |
+    | queued; drain only after a failure                    |
     \*-----------------------------------------------------*/
-    for(unsigned int stale_idx = 0; stale_idx < VIA_MAX_STALE_REPORTS; stale_idx++)
+    if(needs_resync)
     {
-        if(hid_read_timeout(dev, usb_buf, VIA_PACKET_SIZE, 0) <= 0)
+        for(unsigned int stale_idx = 0; stale_idx < VIA_MAX_STALE_REPORTS; stale_idx++)
         {
-            break;
+            if(hid_read_timeout(dev, usb_buf, VIA_PACKET_SIZE, 0) <= 0)
+            {
+                break;
+            }
         }
+
+        needs_resync = false;
     }
 
     usb_buf[0] = 0x00;
@@ -81,16 +90,15 @@ bool ViaRGBMatrixController::Transfer(unsigned char* data)
 
     if(hid_write(dev, usb_buf, VIA_PACKET_SIZE + 1) < 0)
     {
+        needs_resync = true;
         return(false);
     }
 
     for(unsigned int attempt_idx = 0; attempt_idx < VIA_MAX_STALE_REPORTS; attempt_idx++)
     {
-        int bytes_read = hid_read_timeout(dev, usb_buf, VIA_PACKET_SIZE, VIA_READ_TIMEOUT_MS);
-
-        if(bytes_read <= 0)
+        if(hid_read_timeout(dev, usb_buf, VIA_PACKET_SIZE, VIA_READ_TIMEOUT_MS) <= 0)
         {
-            return(false);
+            break;
         }
 
         if(usb_buf[0] == VIA_CMD_UNHANDLED)
@@ -105,6 +113,7 @@ bool ViaRGBMatrixController::Transfer(unsigned char* data)
         }
     }
 
+    needs_resync = true;
     return(false);
 }
 
@@ -157,34 +166,44 @@ bool ViaRGBMatrixController::SetValue(unsigned char value_id, const unsigned cha
     return(Transfer(buf));
 }
 
-bool ViaRGBMatrixController::GetBrightness(unsigned char* brightness)
+bool ViaRGBMatrixController::ReadState(via_rgb_state* state)
 {
-    return(GetValue(VIA_RGB_MATRIX_BRIGHTNESS, brightness, 1));
-}
+    unsigned char hue_sat[2];
 
-bool ViaRGBMatrixController::GetEffect(unsigned char* effect)
-{
-    return(GetValue(VIA_RGB_MATRIX_EFFECT, effect, 1));
-}
-
-bool ViaRGBMatrixController::GetSpeed(unsigned char* speed)
-{
-    return(GetValue(VIA_RGB_MATRIX_EFFECT_SPEED, speed, 1));
-}
-
-bool ViaRGBMatrixController::GetColor(unsigned char* hue, unsigned char* sat)
-{
-    unsigned char hs[2];
-
-    if(!GetValue(VIA_RGB_MATRIX_COLOR, hs, 2))
+    if(!GetValue(VIA_RGB_MATRIX_EFFECT,       &state->effect,     1)
+    || !GetValue(VIA_RGB_MATRIX_BRIGHTNESS,   &state->brightness, 1)
+    || !GetValue(VIA_RGB_MATRIX_EFFECT_SPEED, &state->speed,      1)
+    || !GetValue(VIA_RGB_MATRIX_COLOR,        hue_sat,            2))
     {
         return(false);
     }
 
-    *hue = hs[0];
-    *sat = hs[1];
+    state->hue = hue_sat[0];
+    state->sat = hue_sat[1];
 
     return(true);
+}
+
+/*---------------------------------------------------------*\
+| QMK clamps an out-of-range mode to RGB_MATRIX_EFFECT_MAX-1|
+| so setting 0xFF and reading it back yields the last       |
+| enabled effect id. The original effect is restored and    |
+| nothing is written to EEPROM.                             |
+\*---------------------------------------------------------*/
+bool ViaRGBMatrixController::ProbeMaxEffect(unsigned char* max_effect)
+{
+    unsigned char original_effect;
+
+    if(!GetValue(VIA_RGB_MATRIX_EFFECT, &original_effect, 1))
+    {
+        return(false);
+    }
+
+    bool ok = SetEffect(0xFF) && GetValue(VIA_RGB_MATRIX_EFFECT, max_effect, 1);
+
+    SetEffect(original_effect);
+
+    return(ok && *max_effect != 0xFF && *max_effect != 0);
 }
 
 bool ViaRGBMatrixController::SetBrightness(unsigned char brightness)
@@ -204,9 +223,9 @@ bool ViaRGBMatrixController::SetSpeed(unsigned char speed)
 
 bool ViaRGBMatrixController::SetColor(unsigned char hue, unsigned char sat)
 {
-    unsigned char hs[2] = { hue, sat };
+    unsigned char hue_sat[2] = { hue, sat };
 
-    return(SetValue(VIA_RGB_MATRIX_COLOR, hs, 2));
+    return(SetValue(VIA_RGB_MATRIX_COLOR, hue_sat, 2));
 }
 
 bool ViaRGBMatrixController::Save()
@@ -218,26 +237,4 @@ bool ViaRGBMatrixController::Save()
     buf[1] = VIA_CHANNEL_RGB_MATRIX;
 
     return(Transfer(buf));
-}
-
-/*---------------------------------------------------------*\
-| QMK clamps an out-of-range mode to RGB_MATRIX_EFFECT_MAX-1|
-| so setting 0xFF and reading it back yields the last       |
-| enabled effect id. The original effect is restored and    |
-| nothing is written to EEPROM.                             |
-\*---------------------------------------------------------*/
-bool ViaRGBMatrixController::ProbeMaxEffect(unsigned char* max_effect)
-{
-    unsigned char original_effect;
-
-    if(!GetEffect(&original_effect))
-    {
-        return(false);
-    }
-
-    bool ok = SetEffect(0xFF) && GetEffect(max_effect);
-
-    SetEffect(original_effect);
-
-    return(ok && *max_effect != 0xFF && *max_effect != 0);
 }

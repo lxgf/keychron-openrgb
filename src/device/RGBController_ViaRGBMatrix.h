@@ -4,9 +4,8 @@
 |   Binds a VIA RGB Matrix keyboard to an OpenRGB virtual   |
 |   controller: one zone, one LED, Direct mode plus the     |
 |   firmware's effects. Translates OpenRGB callbacks into   |
-|   lighting state requests.                                |
-|                                                           |
-|   Register() and Unregister() must run on the worker.     |
+|   synchronous lighting updates on OpenRGB's per-device    |
+|   call thread.                                            |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
@@ -18,12 +17,11 @@
 #include "ViaLightingSync.h"
 #include "ViaRGBMatrixController.h"
 #include "ViaRGBMatrixDevices.h"
-#include "ViaWorker.h"
 
 class RGBController_ViaRGBMatrix
 {
 public:
-    RGBController_ViaRGBMatrix(ViaRGBMatrixController* controller_ptr, const via_device_entry* entry, OpenRGBPluginAPIInterface* api, ViaWorker* worker);
+    RGBController_ViaRGBMatrix(ViaRGBMatrixController* controller_ptr, const via_device_entry* entry, OpenRGBPluginAPIInterface* api);
     ~RGBController_ViaRGBMatrix();
 
     bool                Register();

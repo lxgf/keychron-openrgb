@@ -141,7 +141,7 @@ void ViaRGBMatrixDetector::DeviceArrived(const std::string& path, const via_devi
         return;
     }
 
-    RGBController_ViaRGBMatrix* device = new RGBController_ViaRGBMatrix(controller, entry, plugin_api, worker);
+    RGBController_ViaRGBMatrix* device = new RGBController_ViaRGBMatrix(controller, entry, plugin_api);
 
     if(!device->Register())
     {
@@ -165,17 +165,8 @@ void ViaRGBMatrixDetector::DeviceLeft(const std::string& path)
     }
 }
 
-/*---------------------------------------------------------*\
-| Once unregistered, OpenRGB stops calling the device, but  |
-| a flush it queued may still be pending on the worker:     |
-| free it behind that flush instead of right away.          |
-\*---------------------------------------------------------*/
 void ViaRGBMatrixDetector::RemoveDevice(std::size_t device_idx)
 {
-    RGBController_ViaRGBMatrix* device = devices[device_idx];
-
+    delete devices[device_idx];
     devices.erase(devices.begin() + device_idx);
-    device->Unregister();
-
-    worker->Post([device]{ delete device; });
 }

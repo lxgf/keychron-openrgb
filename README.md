@@ -22,8 +22,12 @@ Plugins load only into the OpenRGB version they were built for.
 |---|---|
 | Keychron C2 Pro (V1) RGB | `3434:0520` |
 
-Other keyboards are added to the allowlist in `src/ViaRGBMatrixDevices.cpp`.
+Other keyboards are added to the allowlist in `src/device/ViaRGBMatrixDevices.cpp`.
 Close Keychron Launcher / VIA while using OpenRGB.
+
+## Known issues
+
+- OpenRGB 1.1 logs `Device thread still active in base class destructor` when a plugin device is removed (unplug, plugin unload). It comes from OpenRGB's `RGBController_Virtual` not calling `Shutdown()` and is harmless.
 
 ## Build (Windows)
 

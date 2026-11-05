@@ -13,8 +13,8 @@
 #include "ViaLog.h"
 #include "ViaRGBMatrixModes.h"
 
-RGBController_ViaRGBMatrix::RGBController_ViaRGBMatrix(ViaRGBMatrixController* controller_ptr, const via_device_entry* entry, OpenRGBPluginAPIInterface* api, ViaWorker* worker)
-    : sync(controller_ptr, worker)
+RGBController_ViaRGBMatrix::RGBController_ViaRGBMatrix(ViaRGBMatrixController* controller_ptr, const via_device_entry* entry, OpenRGBPluginAPIInterface* api)
+    : sync(controller_ptr)
 {
     controller      = controller_ptr;
     device_entry    = entry;
@@ -97,8 +97,8 @@ bool RGBController_ViaRGBMatrix::Register()
 }
 
 /*---------------------------------------------------------*\
-| After this returns OpenRGB no longer calls back into us,  |
-| though a flush queued earlier may still be on the worker. |
+| Deleting the virtual controller joins its device thread,  |
+| so no callback is running or pending once this returns    |
 \*---------------------------------------------------------*/
 void RGBController_ViaRGBMatrix::Unregister()
 {
@@ -119,12 +119,12 @@ void RGBController_ViaRGBMatrix::OnUpdateLEDs()
         return;
     }
 
-    via_rgb_state next = sync.GetRequested();
+    via_rgb_state next = sync.GetState();
 
     next.effect = VIA_EFFECT_SOLID_COLOR;
     via_rgb_to_hsv(rgb_controller->GetColor(0), &next.hue, &next.sat, &next.brightness);
 
-    sync.Request(next, false);
+    sync.Apply(next, false);
 }
 
 void RGBController_ViaRGBMatrix::OnUpdateMode(bool save)
@@ -145,7 +145,7 @@ void RGBController_ViaRGBMatrix::OnUpdateMode(bool save)
         return;
     }
 
-    via_rgb_state   next    = sync.GetRequested();
+    via_rgb_state   next    = sync.GetState();
     unsigned int    flags   = rgb_controller->GetModeFlags(active_mode);
 
     next.effect = via_mode_to_effect(active_mode);
@@ -166,7 +166,7 @@ void RGBController_ViaRGBMatrix::OnUpdateMode(bool save)
         via_rgb_to_hsv(rgb_controller->GetModeColor(active_mode, 0), &next.hue, &next.sat, &unused_val);
     }
 
-    sync.Request(next, save);
+    sync.Apply(next, save);
 }
 
 void RGBController_ViaRGBMatrix::DeviceUpdateLEDsCallback(void* object)

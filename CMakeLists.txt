@@ -30,30 +30,34 @@ if(GIT_FOUND)
 endif()
 
 add_library(OpenRGBViaRGBMatrixPlugin SHARED
-    src/ViaRGBMatrixPlugin.cpp
-    src/ViaRGBMatrixPlugin.h
-    src/ViaRGBMatrixDetector.cpp
-    src/ViaRGBMatrixDetector.h
-    src/RGBController_ViaRGBMatrix.cpp
-    src/RGBController_ViaRGBMatrix.h
-    src/ViaLightingSync.cpp
-    src/ViaLightingSync.h
-    src/ViaRGBMatrixModes.cpp
-    src/ViaRGBMatrixModes.h
-    src/ViaRGBMatrixController.cpp
-    src/ViaRGBMatrixController.h
-    src/ViaRGBMatrixDevices.cpp
-    src/ViaRGBMatrixDevices.h
-    src/ViaColor.cpp
-    src/ViaColor.h
-    src/ViaWorker.cpp
-    src/ViaWorker.h
-    src/ViaLog.cpp
-    src/ViaLog.h
+    src/plugin/ViaRGBMatrixPlugin.cpp
+    src/plugin/ViaRGBMatrixPlugin.h
+    src/plugin/ViaWorker.cpp
+    src/plugin/ViaWorker.h
+    src/detection/ViaRGBMatrixDetector.cpp
+    src/detection/ViaRGBMatrixDetector.h
+    src/device/RGBController_ViaRGBMatrix.cpp
+    src/device/RGBController_ViaRGBMatrix.h
+    src/device/ViaLightingSync.cpp
+    src/device/ViaLightingSync.h
+    src/device/ViaRGBMatrixModes.cpp
+    src/device/ViaRGBMatrixModes.h
+    src/device/ViaRGBMatrixDevices.cpp
+    src/device/ViaRGBMatrixDevices.h
+    src/device/ViaColor.cpp
+    src/device/ViaColor.h
+    src/protocol/ViaRGBMatrixController.cpp
+    src/protocol/ViaRGBMatrixController.h
+    src/common/ViaLog.cpp
+    src/common/ViaLog.h
 )
 
 target_include_directories(OpenRGBViaRGBMatrixPlugin PRIVATE
-    src
+    src/plugin
+    src/detection
+    src/device
+    src/protocol
+    src/common
     ${OPENRGB_DIR}
     ${OPENRGB_DIR}/RGBController
     ${OPENRGB_DIR}/dependencies/json

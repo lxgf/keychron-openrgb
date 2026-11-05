@@ -1,10 +1,11 @@
 /*---------------------------------------------------------*\
 | ViaWorker.h                                               |
 |                                                           |
-|   Single background thread shared by the whole plugin.    |
-|   Every HID transfer and every device (un)registration    |
-|   runs here, so no OpenRGB or GUI thread ever blocks on   |
-|   the keyboard.                                           |
+|   Single background thread for detection and device       |
+|   lifecycle (open, handshake, (un)register). Idle unless  |
+|   a keyboard is plugged in or removed. Lighting updates   |
+|   do not pass through here: they run on OpenRGB's own     |
+|   per-device call thread.                                 |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/

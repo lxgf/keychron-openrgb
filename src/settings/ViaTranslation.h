@@ -22,3 +22,8 @@
 | OpenRGB language, or the string itself                    |
 \*---------------------------------------------------------*/
 QString via_tr(const char* text);
+
+/*---------------------------------------------------------*\n| Name of the active OpenRGB language, to tell a real       |
+| language switch from OpenRGB reinstalling the same one    |
+\*---------------------------------------------------------*/
+QString via_ui_language();

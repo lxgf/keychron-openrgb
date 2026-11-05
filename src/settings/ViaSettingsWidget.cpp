@@ -13,6 +13,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QSpinBox>
 #include <QTime>
 #include <QTimeEdit>
@@ -48,12 +49,14 @@ ViaSettingsWidget::ViaSettingsWidget(ViaSettings* settings_ptr, QWidget* parent)
 }
 
 /*---------------------------------------------------------*\
-| OpenRGB swaps its translator when the language changes;   |
-| rebuilding is simpler than retranslating every widget     |
+| OpenRGB reinstalls its translator on every settings save, |
+| ours included, so LanguageChange arrives far more often   |
+| than the language actually changes: rebuild only then.    |
+| Rebuilding is simpler than retranslating every widget.    |
 \*---------------------------------------------------------*/
 void ViaSettingsWidget::changeEvent(QEvent* event)
 {
-    if(event->type() == QEvent::LanguageChange)
+    if(event->type() == QEvent::LanguageChange && via_ui_language() != built_language)
     {
         BuildContent();
     }
@@ -63,7 +66,10 @@ void ViaSettingsWidget::changeEvent(QEvent* event)
 
 void ViaSettingsWidget::BuildContent()
 {
-    QWidget* old_content = scroll->takeWidget();
+    int         scroll_position = scroll->verticalScrollBar()->value();
+    QWidget*    old_content     = scroll->takeWidget();
+
+    built_language = via_ui_language();
 
     if(old_content != NULL)
     {
@@ -116,6 +122,12 @@ void ViaSettingsWidget::BuildContent()
     content_layout->addStretch();
 
     scroll->setWidget(content);
+
+    /*-----------------------------------------------------*\
+    | The new content has no layout (and no scroll range)   |
+    | yet; restore the position once it has                 |
+    \*-----------------------------------------------------*/
+    QTimer::singleShot(0, scroll, [this, scroll_position]{ scroll->verticalScrollBar()->setValue(scroll_position); });
 }
 
 ViaSettingsWidget::~ViaSettingsWidget()

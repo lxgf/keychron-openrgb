@@ -91,9 +91,14 @@ static const via_translation russian[] =
       "Пустая очередь — играют все эффекты. Длительность 0 — общее время показа; без цвета — цвет режима (или случайный)." },
 };
 
+QString via_ui_language()
+{
+    return(QCoreApplication::translate("Settings", "English - US"));
+}
+
 static bool via_ui_is_russian()
 {
-    return(QCoreApplication::translate("Settings", "English - US") == QString::fromUtf8("Русский"));
+    return(via_ui_language() == QString::fromUtf8("Русский"));
 }
 
 QString via_tr(const char* text)

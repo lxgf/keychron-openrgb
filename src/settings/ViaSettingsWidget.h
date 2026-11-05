@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <QString>
 #include <QWidget>
 #include "ViaSettings.h"
 
@@ -37,6 +38,7 @@ private:
     ViaSettings*                settings;
     QTimer*                     save_timer;
     QScrollArea*                scroll;
+    QString                     built_language;
     std::vector<std::string>    effect_names;
 
     void            BuildContent();

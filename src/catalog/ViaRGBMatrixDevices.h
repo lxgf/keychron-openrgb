@@ -10,6 +10,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #define VIA_EFFECT_OFF                  0
 #define VIA_EFFECT_SOLID_COLOR          1
@@ -30,5 +31,11 @@ extern const unsigned int       via_device_count;
 const via_device_entry* via_find_device(unsigned short vid, unsigned short pid);
 
 std::string via_effect_name(const via_device_entry* entry, unsigned int effect_id);
+int         via_find_effect(const via_device_entry* entry, unsigned char max_effect, const std::string& effect_name);
+
+/*---------------------------------------------------------*\
+| Every known effect name except Off, for settings pickers  |
+\*---------------------------------------------------------*/
+std::vector<std::string> via_all_effect_names();
 bool        via_effect_uses_color(const std::string& effect_name);
 bool        via_effect_uses_speed(const std::string& effect_name);

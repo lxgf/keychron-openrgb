@@ -80,3 +80,39 @@ RGBColor via_hsv_to_rgb(unsigned char hue, unsigned char sat, unsigned char val)
 
     return(ToRGBColor((int)lroundf((r + m) * 255.0f), (int)lroundf((g + m) * 255.0f), (int)lroundf((b + m) * 255.0f)));
 }
+
+void via_blend_hue_sat(RGBColor from, RGBColor to, float t, unsigned char* hue, unsigned char* sat)
+{
+    unsigned char from_hue = 0;
+    unsigned char from_sat = 0;
+    unsigned char to_hue   = 0;
+    unsigned char to_sat   = 0;
+    unsigned char unused_val;
+
+    via_rgb_to_hsv(from, &from_hue, &from_sat, &unused_val);
+    via_rgb_to_hsv(to,   &to_hue,   &to_sat,   &unused_val);
+
+    if(t < 0.0f)
+    {
+        t = 0.0f;
+    }
+
+    if(t > 1.0f)
+    {
+        t = 1.0f;
+    }
+
+    int hue_delta = (int)to_hue - (int)from_hue;
+
+    if(hue_delta > 128)
+    {
+        hue_delta -= 256;
+    }
+    else if(hue_delta < -128)
+    {
+        hue_delta += 256;
+    }
+
+    *hue = (unsigned char)(((int)lroundf(from_hue + hue_delta * t) + 256) & 0xFF);
+    *sat = (unsigned char)lroundf(from_sat + ((int)to_sat - (int)from_sat) * t);
+}

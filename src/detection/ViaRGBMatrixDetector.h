@@ -15,12 +15,13 @@
 #include <hidapi.h>
 #include "OpenRGBPluginInterface.h"
 #include "RGBController_ViaRGBMatrix.h"
+#include "ViaSettings.h"
 #include "ViaWorker.h"
 
 class ViaRGBMatrixDetector
 {
 public:
-    ViaRGBMatrixDetector(OpenRGBPluginAPIInterface* api, ViaWorker* worker_ptr);
+    ViaRGBMatrixDetector(OpenRGBPluginAPIInterface* api, ViaWorker* worker_ptr, ViaSettings* settings_ptr);
 
     void            Start();
     void            Stop();
@@ -28,6 +29,7 @@ public:
 private:
     OpenRGBPluginAPIInterface*                  plugin_api;
     ViaWorker*                                  worker;
+    ViaSettings*                                settings;
     std::vector<hid_hotplug_callback_handle>    hotplug_handles;
     std::vector<RGBController_ViaRGBMatrix*>    devices;
     bool                                        stopped;

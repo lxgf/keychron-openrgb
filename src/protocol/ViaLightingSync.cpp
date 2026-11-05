@@ -22,17 +22,23 @@ ViaLightingSync::ViaLightingSync(ViaRGBMatrixController* controller_ptr)
 
 void ViaLightingSync::Init(const via_rgb_state& current)
 {
+    std::lock_guard<std::mutex> guard(sync_lock);
+
     sent        = current;
     sent_valid  = true;
 }
 
-const via_rgb_state& ViaLightingSync::GetState()
+via_rgb_state ViaLightingSync::GetState()
 {
+    std::lock_guard<std::mutex> guard(sync_lock);
+
     return(sent);
 }
 
 void ViaLightingSync::Apply(const via_rgb_state& next, bool save)
 {
+    std::lock_guard<std::mutex> guard(sync_lock);
+
     bool ok = true;
 
     if(ok && (!sent_valid || next.effect != sent.effect))

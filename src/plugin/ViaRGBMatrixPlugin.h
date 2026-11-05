@@ -10,8 +10,11 @@
 #pragma once
 
 #include <QObject>
+#include <QPointer>
+#include <QWidget>
 #include "OpenRGBPluginInterface.h"
 #include "ViaRGBMatrixDetector.h"
+#include "ViaSettings.h"
 #include "ViaWorker.h"
 
 class ViaRGBMatrixPlugin : public QObject, public OpenRGBPluginInterface
@@ -43,4 +46,6 @@ public:
 private:
     ViaWorker*              worker;
     ViaRGBMatrixDetector*   detector;
+    ViaSettings*            settings;
+    QPointer<QWidget>       widget;
 };

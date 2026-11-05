@@ -125,6 +125,56 @@ std::string via_effect_name(const via_device_entry* entry, unsigned int effect_i
     }
 }
 
+int via_find_effect(const via_device_entry* entry, unsigned char max_effect, const std::string& effect_name)
+{
+    for(unsigned int effect_id = 0; effect_id <= max_effect; effect_id++)
+    {
+        if(via_effect_name(entry, effect_id) == effect_name)
+        {
+            return((int)effect_id);
+        }
+    }
+
+    return(-1);
+}
+
+std::vector<std::string> via_all_effect_names()
+{
+    std::vector<std::string> names;
+
+    for(unsigned int device_idx = 0; device_idx < via_device_count; device_idx++)
+    {
+        const via_device_entry* entry = &via_devices[device_idx];
+
+        if(entry->effect_names == NULL)
+        {
+            continue;
+        }
+
+        for(unsigned int effect_id = VIA_EFFECT_SOLID_COLOR; effect_id < entry->effect_count; effect_id++)
+        {
+            std::string name = entry->effect_names[effect_id];
+            bool        seen = false;
+
+            for(std::size_t name_idx = 0; name_idx < names.size(); name_idx++)
+            {
+                if(names[name_idx] == name)
+                {
+                    seen = true;
+                    break;
+                }
+            }
+
+            if(!seen)
+            {
+                names.push_back(name);
+            }
+        }
+    }
+
+    return(names);
+}
+
 bool via_effect_uses_color(const std::string& effect_name)
 {
     return(!name_in_list(effect_name, no_color_effects, sizeof(no_color_effects) / sizeof(no_color_effects[0])));

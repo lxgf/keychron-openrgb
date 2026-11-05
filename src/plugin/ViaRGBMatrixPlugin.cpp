@@ -9,6 +9,7 @@
 
 #include "ViaLog.h"
 #include "ViaRGBMatrixPlugin.h"
+#include "ViaSettingsWidget.h"
 
 #ifndef VIA_PLUGIN_VERSION
 #define VIA_PLUGIN_VERSION              "0.0.0"
@@ -23,15 +24,11 @@
 \*---------------------------------------------------------*/
 #define VIA_PLUGIN_SDK_PROTOCOL_VERSION 6
 
-/*---------------------------------------------------------*\
-| Any value outside the location enum hides the plugin tab |
-\*---------------------------------------------------------*/
-#define VIA_PLUGIN_LOCATION_NONE        0xFFFFFFFF
-
 ViaRGBMatrixPlugin::ViaRGBMatrixPlugin()
 {
     worker   = NULL;
     detector = NULL;
+    settings = NULL;
 }
 
 ViaRGBMatrixPlugin::~ViaRGBMatrixPlugin()
@@ -44,12 +41,12 @@ OpenRGBPluginInfo ViaRGBMatrixPlugin::GetPluginInfo()
     OpenRGBPluginInfo info;
 
     info.Name               = "VIA RGB Matrix";
-    info.Description        = "Stock QMK/VIA keyboards with RGB Matrix: hardware effects and single-color Direct mode";
+    info.Description        = "Stock QMK/VIA keyboards with RGB Matrix: firmware effects, single-color Direct mode and host-driven custom effects";
     info.Version            = VIA_PLUGIN_VERSION;
     info.Commit             = VIA_PLUGIN_COMMIT;
     info.URL                = "";
-    info.Location           = VIA_PLUGIN_LOCATION_NONE;
-    info.Label              = "";
+    info.Location           = OPENRGB_PLUGIN_LOCATION_SETTINGS;
+    info.Label              = "VIA RGB Matrix";
     info.ProtocolVersion    = VIA_PLUGIN_SDK_PROTOCOL_VERSION;
 
     return(info);
@@ -65,8 +62,9 @@ void ViaRGBMatrixPlugin::Load(OpenRGBPluginAPIInterface* plugin_api_ptr)
     via_log_set_api(plugin_api_ptr);
     VIA_LOG(LL_INFO, "plugin %s loaded", VIA_PLUGIN_VERSION);
 
+    settings = new ViaSettings(plugin_api_ptr);
     worker   = new ViaWorker();
-    detector = new ViaRGBMatrixDetector(plugin_api_ptr, worker);
+    detector = new ViaRGBMatrixDetector(plugin_api_ptr, worker, settings);
 
     worker->Start();
     detector->Start();
@@ -74,7 +72,12 @@ void ViaRGBMatrixPlugin::Load(OpenRGBPluginAPIInterface* plugin_api_ptr)
 
 QWidget* ViaRGBMatrixPlugin::GetWidget()
 {
-    return(NULL);
+    if(widget.isNull() && settings != NULL)
+    {
+        widget = new ViaSettingsWidget(settings);
+    }
+
+    return(widget.data());
 }
 
 QMenu* ViaRGBMatrixPlugin::GetTrayMenu()
@@ -85,6 +88,9 @@ QMenu* ViaRGBMatrixPlugin::GetTrayMenu()
 /*---------------------------------------------------------*\
 | The DLL is unmapped right after this: every device must  |
 | be unregistered and the worker joined before returning.  |
+| OpenRGB only removes the tab, so the settings widget,    |
+| whose code lives in this DLL, is deleted here unless Qt  |
+| already did so with the main window.                     |
 \*---------------------------------------------------------*/
 void ViaRGBMatrixPlugin::Unload()
 {
@@ -93,13 +99,17 @@ void ViaRGBMatrixPlugin::Unload()
         return;
     }
 
+    delete widget.data();
+
     detector->Stop();
     worker->Stop();
 
     delete detector;
     delete worker;
+    delete settings;
     detector = NULL;
     worker   = NULL;
+    settings = NULL;
 
     via_log_set_api(NULL);
 }

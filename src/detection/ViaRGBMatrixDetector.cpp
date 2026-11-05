@@ -14,10 +14,11 @@
 #include "ViaLog.h"
 #include "ViaRGBMatrixDetector.h"
 
-ViaRGBMatrixDetector::ViaRGBMatrixDetector(OpenRGBPluginAPIInterface* api, ViaWorker* worker_ptr)
+ViaRGBMatrixDetector::ViaRGBMatrixDetector(OpenRGBPluginAPIInterface* api, ViaWorker* worker_ptr, ViaSettings* settings_ptr)
 {
     plugin_api  = api;
     worker      = worker_ptr;
+    settings    = settings_ptr;
     stopped     = false;
 }
 
@@ -141,7 +142,7 @@ void ViaRGBMatrixDetector::DeviceArrived(const std::string& path, const via_devi
         return;
     }
 
-    RGBController_ViaRGBMatrix* device = new RGBController_ViaRGBMatrix(controller, entry, plugin_api);
+    RGBController_ViaRGBMatrix* device = new RGBController_ViaRGBMatrix(controller, entry, plugin_api, settings);
 
     if(!device->Register())
     {

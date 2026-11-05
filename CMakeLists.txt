@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(OpenRGBViaRGBMatrixPlugin VERSION 0.1.0 LANGUAGES CXX)
+project(OpenRGBViaRGBMatrixPlugin VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -41,25 +41,48 @@ add_library(OpenRGBViaRGBMatrixPlugin SHARED
     src/detection/ViaRGBMatrixDetector.h
     src/device/RGBController_ViaRGBMatrix.cpp
     src/device/RGBController_ViaRGBMatrix.h
-    src/device/ViaLightingSync.cpp
-    src/device/ViaLightingSync.h
     src/device/ViaRGBMatrixModes.cpp
     src/device/ViaRGBMatrixModes.h
-    src/device/ViaRGBMatrixDevices.cpp
-    src/device/ViaRGBMatrixDevices.h
-    src/device/ViaColor.cpp
-    src/device/ViaColor.h
+    src/effects/ViaAudioCapture.cpp
+    src/effects/ViaAudioCapture.h
+    src/effects/ViaCustomEffect.h
+    src/effects/ViaCustomEffectFactories.h
+    src/effects/ViaCustomEffects.cpp
+    src/effects/ViaCustomEffects.h
+    src/effects/ViaEffectAudio.cpp
+    src/effects/ViaEffectDayNight.cpp
+    src/effects/ViaEffectEngine.cpp
+    src/effects/ViaEffectEngine.h
+    src/effects/ViaEffectHueCycle.cpp
+    src/effects/ViaEffectPlaylist.cpp
+    src/effects/ViaEffectSystemMonitor.cpp
+    src/effects/ViaSystemSensors.cpp
+    src/effects/ViaSystemSensors.h
+    src/settings/ViaSettings.cpp
+    src/settings/ViaSettings.h
+    src/settings/ViaSettingsWidget.cpp
+    src/settings/ViaSettingsWidget.h
+    src/catalog/ViaColor.cpp
+    src/catalog/ViaColor.h
+    src/catalog/ViaRGBMatrixDevices.cpp
+    src/catalog/ViaRGBMatrixDevices.h
+    src/protocol/ViaLightingSync.cpp
+    src/protocol/ViaLightingSync.h
     src/protocol/ViaRGBMatrixController.cpp
     src/protocol/ViaRGBMatrixController.h
     src/common/ViaLog.cpp
     src/common/ViaLog.h
 )
 
+# Layers, top to bottom; each one only includes the layers below it
 target_include_directories(OpenRGBViaRGBMatrixPlugin PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     src/plugin
     src/detection
     src/device
+    src/effects
+    src/settings
+    src/catalog
     src/protocol
     src/common
     ${OPENRGB_DIR}
@@ -83,4 +106,6 @@ target_link_libraries(OpenRGBViaRGBMatrixPlugin PRIVATE
     Qt6::Gui
     Qt6::Widgets
     ${HIDAPI_DIR}/x64/hidapi-hotplug.lib
+    ole32
+    pdh
 )

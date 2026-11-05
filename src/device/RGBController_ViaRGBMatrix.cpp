@@ -13,13 +13,14 @@
 #include "ViaLog.h"
 #include "ViaRGBMatrixModes.h"
 
-RGBController_ViaRGBMatrix::RGBController_ViaRGBMatrix(ViaRGBMatrixController* controller_ptr, const via_device_entry* entry, OpenRGBPluginAPIInterface* api)
-    : sync(controller_ptr)
+RGBController_ViaRGBMatrix::RGBController_ViaRGBMatrix(ViaRGBMatrixController* controller_ptr, const via_device_entry* entry, OpenRGBPluginAPIInterface* api, ViaSettings* settings)
+    : sync(controller_ptr), engine(&sync, settings)
 {
     controller      = controller_ptr;
     device_entry    = entry;
     plugin_api      = api;
     rgb_controller  = NULL;
+    max_effect      = 0;
 }
 
 RGBController_ViaRGBMatrix::~RGBController_ViaRGBMatrix()
@@ -35,8 +36,7 @@ const std::string& RGBController_ViaRGBMatrix::GetPath()
 
 bool RGBController_ViaRGBMatrix::Register()
 {
-    via_rgb_state   current;
-    unsigned char   max_effect;
+    via_rgb_state current;
 
     if(!controller->ReadState(&current))
     {
@@ -55,6 +55,11 @@ bool RGBController_ViaRGBMatrix::Register()
             current.brightness, current.speed, current.hue, current.sat);
 
     sync.Init(current);
+
+    via_effect_context context;
+    context.entry       = device_entry;
+    context.max_effect  = max_effect;
+    engine.SetContext(context);
 
     char version[16];
     snprintf(version, sizeof(version), "VIA 0x%04X", controller->GetProtocolVersion());
@@ -98,7 +103,8 @@ bool RGBController_ViaRGBMatrix::Register()
 
 /*---------------------------------------------------------*\
 | Deleting the virtual controller joins its device thread,  |
-| so no callback is running or pending once this returns    |
+| so no callback is running or pending once this returns;   |
+| only then can the engine be stopped for good              |
 \*---------------------------------------------------------*/
 void RGBController_ViaRGBMatrix::Unregister()
 {
@@ -110,6 +116,8 @@ void RGBController_ViaRGBMatrix::Unregister()
     plugin_api->UnregisterVirtualRGBController(rgb_controller);
     plugin_api->DeleteVirtualRGBController(rgb_controller);
     rgb_controller = NULL;
+
+    engine.Stop();
 }
 
 void RGBController_ViaRGBMatrix::OnUpdateLEDs()
@@ -118,6 +126,8 @@ void RGBController_ViaRGBMatrix::OnUpdateLEDs()
     {
         return;
     }
+
+    engine.Stop();
 
     via_rgb_state next = sync.GetState();
 
@@ -131,42 +141,67 @@ void RGBController_ViaRGBMatrix::OnUpdateMode(bool save)
 {
     int active_mode = rgb_controller->GetActiveMode();
 
+    if(active_mode >= via_first_custom_mode(max_effect) && active_mode < (int)rgb_controller->GetModeCount())
+    {
+        RunCustomEffect(active_mode);
+        return;
+    }
+
+    engine.Stop();
+
     if(active_mode == VIA_MODE_DIRECT)
     {
         /*-------------------------------------------------*\
         | Direct is host-driven and never touches EEPROM    |
         \*-------------------------------------------------*/
         OnUpdateLEDs();
-        return;
     }
-
-    if(active_mode < VIA_MODE_FIRST_EFFECT || active_mode >= (int)rgb_controller->GetModeCount())
+    else if(via_mode_is_effect(active_mode, max_effect))
     {
-        return;
+        ApplyFirmwareEffect(active_mode, save);
     }
+}
 
+void RGBController_ViaRGBMatrix::ApplyFirmwareEffect(int mode_idx, bool save)
+{
     via_rgb_state   next    = sync.GetState();
-    unsigned int    flags   = rgb_controller->GetModeFlags(active_mode);
+    unsigned int    flags   = rgb_controller->GetModeFlags(mode_idx);
 
-    next.effect = via_mode_to_effect(active_mode);
+    next.effect = via_mode_to_effect(mode_idx);
 
     if(flags & MODE_FLAG_HAS_BRIGHTNESS)
     {
-        next.brightness = (unsigned char)rgb_controller->GetModeBrightness(active_mode);
+        next.brightness = (unsigned char)rgb_controller->GetModeBrightness(mode_idx);
     }
 
     if(flags & MODE_FLAG_HAS_SPEED)
     {
-        next.speed = (unsigned char)rgb_controller->GetModeSpeed(active_mode);
+        next.speed = (unsigned char)rgb_controller->GetModeSpeed(mode_idx);
     }
 
     if(flags & MODE_FLAG_HAS_MODE_SPECIFIC_COLOR)
     {
         unsigned char unused_val;
-        via_rgb_to_hsv(rgb_controller->GetModeColor(active_mode, 0), &next.hue, &next.sat, &unused_val);
+        via_rgb_to_hsv(rgb_controller->GetModeColor(mode_idx, 0), &next.hue, &next.sat, &unused_val);
     }
 
     sync.Apply(next, save);
+}
+
+void RGBController_ViaRGBMatrix::RunCustomEffect(int mode_idx)
+{
+    via_effect_params   params;
+    unsigned int        color_count = rgb_controller->GetModeColorsCount(mode_idx);
+
+    params.brightness   = (unsigned char)rgb_controller->GetModeBrightness(mode_idx);
+    params.speed        = (unsigned char)rgb_controller->GetModeSpeed(mode_idx);
+
+    for(unsigned int color_idx = 0; color_idx < VIA_EFFECT_MAX_COLORS; color_idx++)
+    {
+        params.colors[color_idx] = (color_idx < color_count) ? rgb_controller->GetModeColor(mode_idx, color_idx) : 0;
+    }
+
+    engine.Run((unsigned int)(mode_idx - via_first_custom_mode(max_effect)), params);
 }
 
 void RGBController_ViaRGBMatrix::DeviceUpdateLEDsCallback(void* object)

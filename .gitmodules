@@ -1,0 +1,4 @@
+[submodule "OpenRGB"]
+	path = OpenRGB
+	url = https://codeberg.org/OpenRGB/OpenRGB.git
+	shallow = true

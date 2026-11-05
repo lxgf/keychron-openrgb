@@ -81,7 +81,7 @@ bool RGBController_ViaRGBMatrix::Register()
     RGBController_Setup setup{};
     setup.name                  = device_entry->name;
     setup.vendor                = device_entry->vendor;
-    setup.description           = "QMK/VIA RGB Matrix keyboard (stock firmware). Custom modes are set up in Settings > VIA RGB Matrix.";
+    setup.description           = "QMK/VIA RGB Matrix keyboard (stock firmware). Custom modes are set up in Settings > Keychron OpenRGB.";
     setup.version               = version;
     setup.serial                = controller->GetSerial();
     setup.location              = controller->GetLocation();

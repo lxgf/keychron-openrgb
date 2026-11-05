@@ -1,7 +1,7 @@
 {
     "OpenRGBPluginAPIVersion": 5,
-    "Id": "via-rgb-matrix",
-    "Name": "VIA RGB Matrix",
+    "Id": "keychron-openrgb",
+    "Name": "Keychron OpenRGB",
     "VersionStr": "@PROJECT_VERSION@",
     "Commit": "@VIA_PLUGIN_COMMIT@",
     "Url": ""

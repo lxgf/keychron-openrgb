@@ -30,14 +30,20 @@ static const via_translation russian[] =
     { "Custom modes are set up only here: brightness, colors and speeds included. On the Devices tab their controls stay inactive. Changes apply immediately.",
       "Кастомные режимы настраиваются только здесь, включая яркость, цвета и скорости. На вкладке «Устройства» их элементы управления неактивны. Изменения применяются сразу." },
 
+    { " (settings: Settings > Keychron OpenRGB)", " (настройки: Настройки → Keychron OpenRGB)" },
     { "Firmware effect",                    "Эффект прошивки" },
     { "Brightness",                         "Яркость" },
     { "Saturation",                         "Насыщенность" },
     { "Effect speed",                       "Скорость эффекта" },
     { "Hue speed",                          "Скорость смены оттенка" },
 
-    { "Walks the hue of the firmware effect round the color wheel (hue speed 1 = 2 min per turn, 100 = 1.2 s).",
-      "Ведёт оттенок эффекта прошивки по цветовому кругу (скорость смены оттенка 1 = круг за 2 мин, 100 = за 1,2 с)." },
+    { "Moves the hue of the firmware effect round the whole wheel or back and forth between two colors (hue speed 1 = 2 min per cycle, 100 = 1.2 s).",
+      "Ведёт оттенок эффекта прошивки по всему цветовому кругу или туда-обратно между двумя цветами (скорость смены оттенка 1 = цикл за 2 мин, 100 = за 1,2 с)." },
+    { "Colors",                             "Цвета" },
+    { "Whole color wheel",                  "Весь цветовой круг" },
+    { "Between two colors",                 "Между двумя цветами" },
+    { "From color",                         "Первый цвет" },
+    { "To color",                           "Второй цвет" },
 
     { "Listens to the default output device. Effect speed is the resting speed when bass drives the speed.",
       "Слушает устройство вывода по умолчанию. Скорость эффекта — скорость в покое, когда басы управляют скоростью." },

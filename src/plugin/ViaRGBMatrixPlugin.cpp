@@ -41,13 +41,13 @@ OpenRGBPluginInfo ViaRGBMatrixPlugin::GetPluginInfo()
 {
     OpenRGBPluginInfo info;
 
-    info.Name               = "VIA RGB Matrix";
+    info.Name               = "Keychron OpenRGB";
     info.Description        = via_tr("Stock QMK/VIA keyboards with RGB Matrix: firmware effects, single-color Direct mode and host-driven custom effects").toStdString();
     info.Version            = VIA_PLUGIN_VERSION;
     info.Commit             = VIA_PLUGIN_COMMIT;
     info.URL                = "";
     info.Location           = OPENRGB_PLUGIN_LOCATION_SETTINGS;
-    info.Label              = "VIA RGB Matrix";
+    info.Label              = "Keychron OpenRGB";
     info.ProtocolVersion    = VIA_PLUGIN_SDK_PROTOCOL_VERSION;
 
     return(info);

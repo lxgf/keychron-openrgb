@@ -20,7 +20,10 @@ static nlohmann::json via_settings_defaults()
             {
                 { "base_effect",        "Solid Splash" },
                 { "brightness",         100 },
-                { "saturation",         255 },
+                { "range",              "full" },
+                { "from_color",         "#0040ff" },
+                { "to_color",           "#c600ff" },
+                { "saturation",         100 },
                 { "effect_speed",       128 },
                 { "hue_speed",          20 },
             }

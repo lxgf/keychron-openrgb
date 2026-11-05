@@ -32,9 +32,10 @@ unsigned char via_resolve_effect(const via_effect_context& context, const std::s
 }
 
 /*---------------------------------------------------------*\
-| Brightness is stored in percent, the keyboard takes 0-255 |
+| Brightness and saturation are stored in percent, the     |
+| keyboard takes 0-255                                      |
 \*---------------------------------------------------------*/
-unsigned char via_setting_brightness(const nlohmann::json& settings, const char* key)
+unsigned char via_setting_percent(const nlohmann::json& settings, const char* key)
 {
     int percent = settings.value(key, VIA_PERCENT_MAX);
 

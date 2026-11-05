@@ -9,6 +9,7 @@
 #include "ViaColor.h"
 #include "ViaCustomEffects.h"
 #include "ViaLog.h"
+#include "ViaTranslation.h"
 #include "ViaRGBMatrixModes.h"
 
 #define VIA_VALUE_MIN                   0
@@ -72,13 +73,17 @@ static mode via_build_effect_mode(const via_device_entry* entry, unsigned char e
 /*---------------------------------------------------------*| Custom effects are configured only in the plugin settings |
 | tab. Without flags OpenRGB greys out every control of the |
 | mode (brightness, speed, colors, save), so nothing on the |
-| Devices tab can disagree with the settings tab.           |
+| Devices tab can disagree with the settings tab. The name  |
+| says where the settings are, in the interface language;   |
+| profiles match modes by name, so a language switch makes  |
+| saved custom modes unmatched (Direct and firmware effects |
+| keep their names).                                        |
 \*---------------------------------------------------------*/
 static mode via_build_custom_mode(const via_custom_effect_desc* desc, unsigned int custom_idx)
 {
     mode Custom;
 
-    Custom.name         = desc->name;
+    Custom.name         = desc->name + via_tr(" (settings: Settings > Keychron OpenRGB)").toStdString();
     Custom.value        = (int)custom_idx;
     Custom.flags        = 0;
     Custom.color_mode   = MODE_COLORS_NONE;

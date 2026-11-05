@@ -33,7 +33,7 @@ typedef struct
 | Settings helpers                                          |
 \*---------------------------------------------------------*/
 unsigned char   via_resolve_effect(const via_effect_context& context, const std::string& effect_name);
-unsigned char   via_setting_brightness(const nlohmann::json& settings, const char* key);
+unsigned char   via_setting_percent(const nlohmann::json& settings, const char* key);
 unsigned char   via_setting_speed(const nlohmann::json& settings, const char* key);
 RGBColor        via_setting_color(const nlohmann::json& settings, const char* key, RGBColor fallback);
 

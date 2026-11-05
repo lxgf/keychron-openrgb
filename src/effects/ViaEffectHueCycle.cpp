@@ -2,13 +2,18 @@
 | ViaEffectHueCycle.cpp                                     |
 |                                                           |
 |   Runs a firmware effect (reactive ones work best) and    |
-|   walks its hue round the color wheel. "hue_speed" sets   |
-|   the cycle time: 1 = 120 s, 100 = 1.2 s per turn.        |
+|   moves its hue over time. "hue_speed" sets the cycle     |
+|   time: 1 = 120 s, 100 = 1.2 s per cycle.                 |
+|                                                           |
+|   range "full":    the whole color wheel, "saturation"    |
+|   range "between": back and forth from "from_color" to    |
+|                    "to_color" (their own saturation)      |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
 
 #include <cmath>
+#include "ViaColor.h"
 #include "ViaCustomEffectFactories.h"
 
 #define HUE_CYCLE_PERIOD_AT_SPEED_1_MS  120000.0
@@ -26,15 +31,22 @@ public:
         saturation      = 255;
         effect_speed    = 128;
         hue_speed       = 20;
+        between         = false;
+        from_color      = ToRGBColor(0, 64, 255);
+        to_color        = ToRGBColor(198, 0, 255);
         hue             = 0.0;
+        phase           = 0.0;
         last_ms         = 0;
     }
 
     void Configure(const nlohmann::json& settings) override
     {
         base_effect     = via_resolve_effect(context, settings.value("base_effect", "Solid Splash"));
-        brightness      = via_setting_brightness(settings, "brightness");
-        saturation      = (unsigned char)settings.value("saturation", 255);
+        brightness      = via_setting_percent(settings, "brightness");
+        saturation      = via_setting_percent(settings, "saturation");
+        between         = (settings.value("range", "full") == "between");
+        from_color      = via_setting_color(settings, "from_color", ToRGBColor(0, 64, 255));
+        to_color        = via_setting_color(settings, "to_color",   ToRGBColor(198, 0, 255));
         effect_speed    = via_setting_speed(settings, "effect_speed");
         hue_speed       = settings.value("hue_speed", 20);
     }
@@ -51,14 +63,30 @@ public:
 
         if(last_ms != 0)
         {
-            hue = fmod(hue + ((now_ms - last_ms) / period_ms) * HUE_STEPS, HUE_STEPS);
+            double advance = (now_ms - last_ms) / period_ms;
+
+            hue     = fmod(hue + advance * HUE_STEPS, HUE_STEPS);
+            phase   = fmod(phase + advance, 1.0);
         }
 
         last_ms             = now_ms;
 
+        if(between)
+        {
+            /*---------------------------------------------*\
+            | Triangle wave: there and back once per cycle  |
+            \*---------------------------------------------*/
+            float t = (float)(phase < 0.5 ? phase * 2.0 : (1.0 - phase) * 2.0);
+
+            via_blend_hue_sat(from_color, to_color, t, &state->hue, &state->sat);
+        }
+        else
+        {
+            state->hue      = (unsigned char)hue;
+            state->sat      = saturation;
+        }
+
         state->effect       = base_effect;
-        state->hue          = (unsigned char)hue;
-        state->sat          = saturation;
         state->brightness   = brightness;
         state->speed        = effect_speed;
 
@@ -77,7 +105,11 @@ private:
     unsigned char       saturation;
     unsigned char       effect_speed;
     int                 hue_speed;
+    bool                between;
+    RGBColor            from_color;
+    RGBColor            to_color;
     double              hue;
+    double              phase;
     unsigned long long  last_ms;
 };
 

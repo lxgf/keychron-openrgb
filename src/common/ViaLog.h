@@ -23,6 +23,6 @@ OpenRGBPluginAPIInterface*  via_log_get_api();
         OpenRGBPluginAPIInterface* via_log_api_ptr = via_log_get_api();                             \
         if(via_log_api_ptr != NULL)                                                                 \
         {                                                                                           \
-            via_log_api_ptr->LogEntry(__FILE__, __LINE__, level, "[VIA RGB Matrix] " __VA_ARGS__);  \
+            via_log_api_ptr->LogEntry(__FILE__, __LINE__, level, "[Keychron OpenRGB] " __VA_ARGS__);\
         }                                                                                           \
     } while(0)

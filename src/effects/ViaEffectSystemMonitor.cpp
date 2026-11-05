@@ -37,7 +37,7 @@ public:
         std::string source = settings.value("source", "cpu");
 
         base_effect     = via_resolve_effect(context, settings.value("base_effect", "Solid Color"));
-        brightness      = via_setting_brightness(settings, "brightness");
+        brightness      = via_setting_percent(settings, "brightness");
         effect_speed    = via_setting_speed(settings, "effect_speed");
         low_color       = via_setting_color(settings, "low_color",  ToRGBColor(0, 255, 0));
         high_color      = via_setting_color(settings, "high_color", ToRGBColor(255, 0, 0));

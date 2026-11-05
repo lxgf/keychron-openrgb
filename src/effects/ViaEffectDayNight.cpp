@@ -55,8 +55,8 @@ public:
     void Configure(const nlohmann::json& settings) override
     {
         base_effect         = via_resolve_effect(context, settings.value("base_effect", "Solid Color"));
-        day_brightness      = via_setting_brightness(settings, "brightness");
-        night_brightness    = via_setting_brightness(settings, "night_brightness");
+        day_brightness      = via_setting_percent(settings, "brightness");
+        night_brightness    = via_setting_percent(settings, "night_brightness");
         effect_speed        = via_setting_speed(settings, "effect_speed");
         day_color           = via_setting_color(settings, "day_color",   ToRGBColor(255, 244, 229));
         night_color         = via_setting_color(settings, "night_color", ToRGBColor(255, 96, 16));

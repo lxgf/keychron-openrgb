@@ -1,4 +1,4 @@
-# OpenRGB VIA RGB Matrix plugin
+# Keychron OpenRGB
 
 OpenRGB plugin that adds stock-firmware QMK/VIA keyboards with RGB Matrix as OpenRGB devices.
 It talks to the VIA raw HID interface (usage page `0xFF60`) and needs no reflashing.
@@ -11,7 +11,7 @@ Per-key lighting is not possible with stock VIA firmware.
 
 ## Custom effects
 
-Listed after the hardware effects in the mode list. They are set up only under **Settings → VIA RGB Matrix** — brightness, colors and speeds included; on the Devices tab their controls are inactive. Changes apply immediately.
+Listed after the hardware effects in the mode list. They are set up only under **Settings → Keychron OpenRGB** — brightness, colors and speeds included; on the Devices tab their controls are inactive. Changes apply immediately.
 
 | Mode | What it does | Options |
 |---|---|---|

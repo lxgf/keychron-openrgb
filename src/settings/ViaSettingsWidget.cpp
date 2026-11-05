@@ -89,10 +89,13 @@ void ViaSettingsWidget::BuildContent()
 
     QFormLayout* form;
 
-    form = AddGroup(content, "Hue Cycle", "Walks the hue of the firmware effect round the color wheel (hue speed 1 = 2 min per turn, 100 = 1.2 s).");
+    form = AddGroup(content, "Hue Cycle", "Moves the hue of the firmware effect round the whole wheel or back and forth between two colors (hue speed 1 = 2 min per cycle, 100 = 1.2 s).");
     AddEffectChoice(form, "hue_cycle", "base_effect",  "Firmware effect");
     AddNumber      (form, "hue_cycle", "brightness",   "Brightness",    0, 100, " %");
-    AddNumber      (form, "hue_cycle", "saturation",   "Saturation",    0, 255, "");
+    AddChoice      (form, "hue_cycle", "range",        "Colors",        { { "Whole color wheel", "full" }, { "Between two colors", "between" } });
+    AddNumber      (form, "hue_cycle", "saturation",   "Saturation",    0, 100, " %");
+    AddColor       (form, "hue_cycle", "from_color",   "From color");
+    AddColor       (form, "hue_cycle", "to_color",     "To color");
     AddNumber      (form, "hue_cycle", "effect_speed", "Effect speed",  0, 255, "");
     AddNumber      (form, "hue_cycle", "hue_speed",    "Hue speed",     1, 100, "");
 

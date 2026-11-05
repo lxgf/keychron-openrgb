@@ -54,7 +54,7 @@ public:
         spectrum        = (settings.value("color_mode", "fixed") == "spectrum");
         sensitivity     = settings.value("sensitivity", 100) / 100.0f;
         floor_level     = settings.value("floor", 5) / 100.0f;
-        brightness      = via_setting_brightness(settings, "brightness");
+        brightness      = via_setting_percent(settings, "brightness");
         effect_speed    = via_setting_speed(settings, "effect_speed");
         bass_color      = via_setting_color(settings, "bass_color",   ToRGBColor(255, 0, 64));
         treble_color    = via_setting_color(settings, "treble_color", ToRGBColor(0, 128, 255));

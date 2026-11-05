@@ -107,7 +107,7 @@ public:
         fade_ms     = settings.value("fade_ms", 600);
         shuffle     = settings.value("shuffle", false);
         random_hue  = settings.value("random_hue", false);
-        brightness      = via_setting_brightness(settings, "brightness");
+        brightness      = via_setting_percent(settings, "brightness");
         effect_speed    = via_setting_speed(settings, "effect_speed");
         default_color   = via_setting_color(settings, "color", ToRGBColor(198, 0, 255));
 

@@ -10,6 +10,7 @@
 #include "ViaLog.h"
 #include "ViaRGBMatrixPlugin.h"
 #include "ViaSettingsWidget.h"
+#include "ViaTranslation.h"
 
 #ifndef VIA_PLUGIN_VERSION
 #define VIA_PLUGIN_VERSION              "0.0.0"
@@ -41,7 +42,7 @@ OpenRGBPluginInfo ViaRGBMatrixPlugin::GetPluginInfo()
     OpenRGBPluginInfo info;
 
     info.Name               = "VIA RGB Matrix";
-    info.Description        = "Stock QMK/VIA keyboards with RGB Matrix: firmware effects, single-color Direct mode and host-driven custom effects";
+    info.Description        = via_tr("Stock QMK/VIA keyboards with RGB Matrix: firmware effects, single-color Direct mode and host-driven custom effects").toStdString();
     info.Version            = VIA_PLUGIN_VERSION;
     info.Commit             = VIA_PLUGIN_COMMIT;
     info.URL                = "";

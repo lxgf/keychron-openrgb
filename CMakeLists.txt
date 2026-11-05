@@ -64,6 +64,8 @@ add_library(OpenRGBViaRGBMatrixPlugin SHARED
     src/settings/ViaSettings.h
     src/settings/ViaSettingsWidget.cpp
     src/settings/ViaSettingsWidget.h
+    src/settings/ViaTranslation.cpp
+    src/settings/ViaTranslation.h
     src/catalog/ViaColor.cpp
     src/catalog/ViaColor.h
     src/catalog/ViaRGBMatrixDevices.cpp

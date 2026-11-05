@@ -8,6 +8,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QEvent>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
@@ -20,6 +21,7 @@
 #include "ViaPlaylistEditor.h"
 #include "ViaRGBMatrixDevices.h"
 #include "ViaSettingsWidget.h"
+#include "ViaTranslation.h"
 
 #define SAVE_DELAY_MS                   500
 
@@ -34,10 +36,44 @@ ViaSettingsWidget::ViaSettingsWidget(ViaSettings* settings_ptr, QWidget* parent)
     save_timer->setInterval(SAVE_DELAY_MS);
     connect(save_timer, &QTimer::timeout, this, [this]{ settings->Save(); });
 
+    scroll = new QScrollArea();
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(scroll);
+
+    BuildContent();
+}
+
+/*---------------------------------------------------------*\
+| OpenRGB swaps its translator when the language changes;   |
+| rebuilding is simpler than retranslating every widget     |
+\*---------------------------------------------------------*/
+void ViaSettingsWidget::changeEvent(QEvent* event)
+{
+    if(event->type() == QEvent::LanguageChange)
+    {
+        BuildContent();
+    }
+
+    QWidget::changeEvent(event);
+}
+
+void ViaSettingsWidget::BuildContent()
+{
+    QWidget* old_content = scroll->takeWidget();
+
+    if(old_content != NULL)
+    {
+        old_content->deleteLater();
+    }
+
     QWidget*        content         = new QWidget();
     QVBoxLayout*    content_layout  = new QVBoxLayout(content);
-    QLabel*         intro           = new QLabel("Brightness, speed and colors of each custom mode are set on the Devices tab like any other mode. "
-                                                 "The options below cover the rest and apply immediately.");
+    QLabel*         intro           = new QLabel(via_tr("Brightness, speed and colors of each custom mode are set on the Devices tab like any other mode. "
+                                                        "The options below cover the rest and apply immediately."));
 
     intro->setWordWrap(true);
     content_layout->addWidget(intro);
@@ -51,7 +87,7 @@ ViaSettingsWidget::ViaSettingsWidget(ViaSettings* settings_ptr, QWidget* parent)
 
     form = AddGroup(content, "Audio Reactive", "Listens to the default output device. Mode speed is the resting effect speed; colors: bass, treble.");
     AddEffectChoice(form, "audio", "base_effect", "Firmware effect");
-    AddChoice      (form, "audio", "target",      "Bass drives",  { { "Brightness", "brightness" }, { "Effect speed", "speed" }, { "Both", "both" } });
+    AddChoice      (form, "audio", "target",      "Bass drives",  { { "Brightness", "brightness" }, { "Speed", "speed" }, { "Both", "both" } });
     AddChoice      (form, "audio", "color_mode",  "Color",        { { "First color", "fixed" }, { "Bass to treble blend", "spectrum" } });
     AddNumber      (form, "audio", "sensitivity", "Sensitivity",  10, 400, " %");
     AddNumber      (form, "audio", "floor",       "Minimum brightness", 0, 100, " %");
@@ -79,14 +115,7 @@ ViaSettingsWidget::ViaSettingsWidget(ViaSettings* settings_ptr, QWidget* parent)
 
     content_layout->addStretch();
 
-    QScrollArea* scroll = new QScrollArea();
-    scroll->setWidgetResizable(true);
-    scroll->setFrameShape(QFrame::NoFrame);
     scroll->setWidget(content);
-
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(scroll);
 }
 
 ViaSettingsWidget::~ViaSettingsWidget()
@@ -102,7 +131,7 @@ QFormLayout* ViaSettingsWidget::AddGroup(QWidget* content, const char* title, co
 {
     QGroupBox*      group   = new QGroupBox(title);
     QFormLayout*    form    = new QFormLayout(group);
-    QLabel*         label   = new QLabel(hint);
+    QLabel*         label   = new QLabel(via_tr(hint));
 
     label->setWordWrap(true);
     form->addRow(label);
@@ -140,7 +169,7 @@ void ViaSettingsWidget::AddEffectChoice(QFormLayout* form, const char* section, 
         Store(section, key, text.toStdString());
     });
 
-    form->addRow(label, combo);
+    form->addRow(via_tr(label), combo);
 }
 
 void ViaSettingsWidget::AddChoice(QFormLayout* form, const char* section, const char* key, const char* label, const choice_list& choices)
@@ -150,7 +179,7 @@ void ViaSettingsWidget::AddChoice(QFormLayout* form, const char* section, const 
 
     for(std::size_t choice_idx = 0; choice_idx < choices.size(); choice_idx++)
     {
-        combo->addItem(choices[choice_idx].first, QString(choices[choice_idx].second));
+        combo->addItem(via_tr(choices[choice_idx].first), QString(choices[choice_idx].second));
 
         if(current == choices[choice_idx].second)
         {
@@ -163,7 +192,7 @@ void ViaSettingsWidget::AddChoice(QFormLayout* form, const char* section, const 
         Store(section, key, combo->currentData().toString().toStdString());
     });
 
-    form->addRow(label, combo);
+    form->addRow(via_tr(label), combo);
 }
 
 void ViaSettingsWidget::AddNumber(QFormLayout* form, const char* section, const char* key, const char* label, int min, int max, const char* suffix)
@@ -171,7 +200,7 @@ void ViaSettingsWidget::AddNumber(QFormLayout* form, const char* section, const 
     QSpinBox* spin = new QSpinBox();
 
     spin->setRange(min, max);
-    spin->setSuffix(suffix);
+    spin->setSuffix(via_tr(suffix));
     spin->setValue(settings->GetSection(section).value(key, min));
 
     connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this, section, key](int value)
@@ -179,12 +208,12 @@ void ViaSettingsWidget::AddNumber(QFormLayout* form, const char* section, const 
         Store(section, key, value);
     });
 
-    form->addRow(label, spin);
+    form->addRow(via_tr(label), spin);
 }
 
 void ViaSettingsWidget::AddCheck(QFormLayout* form, const char* section, const char* key, const char* label)
 {
-    QCheckBox* check = new QCheckBox(label);
+    QCheckBox* check = new QCheckBox(via_tr(label));
 
     check->setChecked(settings->GetSection(section).value(key, false));
 
@@ -209,7 +238,7 @@ void ViaSettingsWidget::AddTime(QFormLayout* form, const char* section, const ch
         Store(section, key, time.toString("HH:mm").toStdString());
     });
 
-    form->addRow(label, edit);
+    form->addRow(via_tr(label), edit);
 }
 
 void ViaSettingsWidget::AddPlaylistQueue(QFormLayout* form, const char* section, const char* key)

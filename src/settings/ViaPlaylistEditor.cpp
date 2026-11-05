@@ -17,6 +17,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include "ViaPlaylistEditor.h"
+#include "ViaTranslation.h"
 
 #define PLAYLIST_TABLE_MIN_HEIGHT       180
 #define PLAYLIST_MAX_DURATION_S         3600
@@ -61,7 +62,7 @@ ViaPlaylistEditor::ViaPlaylistEditor(const std::vector<std::string>& names, cons
     }
 
     table = new QTableWidget(0, COLUMN_COUNT);
-    table->setHorizontalHeaderLabels({ "Effect", "Duration", "Color" });
+    table->setHorizontalHeaderLabels({ via_tr("Effect"), via_tr("Duration"), via_tr("Color") });
     table->horizontalHeader()->setSectionResizeMode(COLUMN_EFFECT,   QHeaderView::Stretch);
     table->horizontalHeader()->setSectionResizeMode(COLUMN_DURATION, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(COLUMN_COLOR,    QHeaderView::ResizeToContents);
@@ -70,10 +71,10 @@ ViaPlaylistEditor::ViaPlaylistEditor(const std::vector<std::string>& names, cons
     table->setSelectionMode(QAbstractItemView::SingleSelection);
     table->setMinimumHeight(PLAYLIST_TABLE_MIN_HEIGHT);
 
-    QPushButton* add_button     = new QPushButton("Add");
-    QPushButton* remove_button  = new QPushButton("Remove");
-    QPushButton* up_button      = new QPushButton("Up");
-    QPushButton* down_button    = new QPushButton("Down");
+    QPushButton* add_button     = new QPushButton(via_tr("Add"));
+    QPushButton* remove_button  = new QPushButton(via_tr("Remove"));
+    QPushButton* up_button      = new QPushButton(via_tr("Up"));
+    QPushButton* down_button    = new QPushButton(via_tr("Down"));
 
     connect(add_button,    &QPushButton::clicked, this, [this]{ Add(); });
     connect(remove_button, &QPushButton::clicked, this, [this]{ RemoveSelected(); });
@@ -87,7 +88,7 @@ ViaPlaylistEditor::ViaPlaylistEditor(const std::vector<std::string>& names, cons
     buttons->addWidget(up_button);
     buttons->addWidget(down_button);
 
-    QLabel* hint = new QLabel("Empty queue plays every effect. Duration 0 uses \"Show each for\"; no color uses the mode color (or a random one).");
+    QLabel* hint = new QLabel(via_tr("Empty queue plays every effect. Duration 0 uses \"Show each for\"; no color uses the mode color (or a random one)."));
     hint->setWordWrap(true);
 
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -142,8 +143,8 @@ void ViaPlaylistEditor::Rebuild(int select_row)
         QSpinBox* spin = new QSpinBox();
 
         spin->setRange(0, PLAYLIST_MAX_DURATION_S);
-        spin->setSuffix(" s");
-        spin->setSpecialValueText("default");
+        spin->setSuffix(via_tr(" s"));
+        spin->setSpecialValueText(via_tr("default"));
         spin->setValue(items[row].duration_s);
 
         connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this, row](int value)
@@ -166,7 +167,7 @@ void ViaPlaylistEditor::Rebuild(int select_row)
 
         if(items[row].color.empty())
         {
-            swatch->setText("mode");
+            swatch->setText(via_tr("mode"));
         }
         else
         {
@@ -244,7 +245,7 @@ void ViaPlaylistEditor::MoveSelected(int offset)
 void ViaPlaylistEditor::PickColor(int row)
 {
     QColor initial = items[row].color.empty() ? QColor(Qt::white) : QColor(QString::fromStdString(items[row].color));
-    QColor picked  = QColorDialog::getColor(initial, this, "Entry color");
+    QColor picked  = QColorDialog::getColor(initial, this, via_tr("Entry color"));
 
     if(!picked.isValid())
     {

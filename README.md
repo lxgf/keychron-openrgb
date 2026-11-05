@@ -21,6 +21,8 @@ Listed after the hardware effects in the mode list. Brightness, speed and colors
 | Effect Playlist | Cycles through firmware effects with a brightness fade between them | speed = effect speed; color | effects, duration, fade, shuffle, random color |
 | Day / Night | Day color and brightness by day, night color and dimmed brightness by night, with a gradual transition | brightness = day; colors: day, night | firmware effect, day/night start, transition, night brightness |
 
+The settings tab follows the OpenRGB interface language (English and Russian for now). Mode names stay in English: OpenRGB matches profile modes and "Direct" by name.
+
 Custom effects are driven by the PC and stop when OpenRGB closes; the keyboard then keeps its last state until it is unplugged. Their effect thread only runs while one of them is selected, and wakes as rarely as the effect allows (60 Hz for audio, 2 Hz for system load, once a minute for day/night).
 
 ## Compatibility

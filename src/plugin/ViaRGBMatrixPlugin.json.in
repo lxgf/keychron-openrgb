@@ -1,0 +1,8 @@
+{
+    "OpenRGBPluginAPIVersion": 5,
+    "Id": "via-rgb-matrix",
+    "Name": "VIA RGB Matrix",
+    "VersionStr": "@PROJECT_VERSION@",
+    "Commit": "@VIA_PLUGIN_COMMIT@",
+    "Url": ""
+}

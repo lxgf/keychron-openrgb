@@ -29,6 +29,9 @@ if(GIT_FOUND)
                     OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 endif()
 
+# OpenRGB reads this metadata before loading the DLL (OpenRGBPluginAPIVersion and Id are required)
+configure_file(src/plugin/ViaRGBMatrixPlugin.json.in ${CMAKE_CURRENT_BINARY_DIR}/ViaRGBMatrixPlugin.json @ONLY)
+
 add_library(OpenRGBViaRGBMatrixPlugin SHARED
     src/plugin/ViaRGBMatrixPlugin.cpp
     src/plugin/ViaRGBMatrixPlugin.h
@@ -53,6 +56,7 @@ add_library(OpenRGBViaRGBMatrixPlugin SHARED
 )
 
 target_include_directories(OpenRGBViaRGBMatrixPlugin PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}
     src/plugin
     src/detection
     src/device

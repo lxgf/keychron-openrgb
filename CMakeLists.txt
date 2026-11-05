@@ -58,6 +58,8 @@ add_library(OpenRGBViaRGBMatrixPlugin SHARED
     src/effects/ViaEffectSystemMonitor.cpp
     src/effects/ViaSystemSensors.cpp
     src/effects/ViaSystemSensors.h
+    src/settings/ViaPlaylistEditor.cpp
+    src/settings/ViaPlaylistEditor.h
     src/settings/ViaSettings.cpp
     src/settings/ViaSettings.h
     src/settings/ViaSettingsWidget.cpp

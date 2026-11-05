@@ -11,18 +11,17 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
-#include <QListWidget>
 #include <QScrollArea>
 #include <QSpinBox>
 #include <QTime>
 #include <QTimeEdit>
 #include <QTimer>
 #include <QVBoxLayout>
+#include "ViaPlaylistEditor.h"
 #include "ViaRGBMatrixDevices.h"
 #include "ViaSettingsWidget.h"
 
 #define SAVE_DELAY_MS                   500
-#define EFFECT_LIST_HEIGHT              160
 
 ViaSettingsWidget::ViaSettingsWidget(ViaSettings* settings_ptr, QWidget* parent)
     : QWidget(parent)
@@ -64,12 +63,12 @@ ViaSettingsWidget::ViaSettingsWidget(ViaSettings* settings_ptr, QWidget* parent)
     AddNumber      (form, "system", "high",        "High",            0, 100, " %");
     AddNumber      (form, "system", "smoothing",   "Smoothing",       0, 95,  " %");
 
-    form = AddGroup(content, "Effect Playlist", "Nothing ticked plays every effect. Mode speed is the effect speed.");
-    AddEffectList  (form, "playlist", "effects",    "Effects");
+    form = AddGroup(content, "Effect Playlist", "Mode speed is the effect speed; mode color is the default entry color.");
+    AddPlaylistQueue(form, "playlist", "effects");
     AddNumber      (form, "playlist", "duration_s", "Show each for", 1, 3600, " s");
     AddNumber      (form, "playlist", "fade_ms",    "Fade",          0, 5000, " ms");
     AddCheck       (form, "playlist", "shuffle",    "Shuffle");
-    AddCheck       (form, "playlist", "random_hue", "Random color per effect");
+    AddCheck       (form, "playlist", "random_hue", "Random color for entries without one");
 
     form = AddGroup(content, "Day / Night", "Colors: day, night. Mode brightness is the day brightness.");
     AddEffectChoice(form, "daynight", "base_effect",      "Firmware effect");
@@ -213,45 +212,13 @@ void ViaSettingsWidget::AddTime(QFormLayout* form, const char* section, const ch
     form->addRow(label, edit);
 }
 
-void ViaSettingsWidget::AddEffectList(QFormLayout* form, const char* section, const char* key, const char* label)
+void ViaSettingsWidget::AddPlaylistQueue(QFormLayout* form, const char* section, const char* key)
 {
-    QListWidget*    list    = new QListWidget();
-    nlohmann::json  current = settings->GetSection(section).value(key, nlohmann::json::array());
-
-    list->setMinimumHeight(EFFECT_LIST_HEIGHT);
-
-    for(std::size_t name_idx = 0; name_idx < effect_names.size(); name_idx++)
+    nlohmann::json      queue   = settings->GetSection(section).value(key, nlohmann::json::array());
+    ViaPlaylistEditor*  editor  = new ViaPlaylistEditor(effect_names, queue, [this, section, key](const nlohmann::json& new_queue)
     {
-        QListWidgetItem*    item    = new QListWidgetItem(QString::fromStdString(effect_names[name_idx]), list);
-        bool                checked = false;
-
-        for(std::size_t current_idx = 0; current_idx < current.size(); current_idx++)
-        {
-            if(current[current_idx].is_string() && current[current_idx].get<std::string>() == effect_names[name_idx])
-            {
-                checked = true;
-                break;
-            }
-        }
-
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
-    }
-
-    connect(list, &QListWidget::itemChanged, this, [this, list, section, key](QListWidgetItem*)
-    {
-        nlohmann::json selected = nlohmann::json::array();
-
-        for(int row = 0; row < list->count(); row++)
-        {
-            if(list->item(row)->checkState() == Qt::Checked)
-            {
-                selected.push_back(list->item(row)->text().toStdString());
-            }
-        }
-
-        Store(section, key, selected);
+        Store(section, key, new_queue);
     });
 
-    form->addRow(label, list);
+    form->addRow(editor);
 }

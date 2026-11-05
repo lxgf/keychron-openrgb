@@ -1,14 +1,23 @@
 /*---------------------------------------------------------*\
 | ViaEffectPlaylist.cpp                                     |
 |                                                           |
-|   Cycles through firmware effects. Each switch fades the  |
-|   brightness out, changes the effect while dark and fades |
-|   back in, which also hides the firmware's restart of    |
-|   the new animation. Mode speed is the effect speed.      |
+|   Plays a queue of firmware effects. Each entry has its   |
+|   own duration (0 = the playlist default) and optional    |
+|   color (else random or the mode color). Each switch      |
+|   fades the brightness out, changes the effect while dark |
+|   and fades back in, which also hides the firmware's      |
+|   restart of the new animation. Mode speed is the effect  |
+|   speed.                                                  |
+|                                                           |
+|   Settings "effects": [ { "effect": name,                 |
+|                           "duration_s": n,                |
+|                           "color": "#RRGGBB" or "" }, ... ]|
+|   Plain name strings (older settings) are accepted too.   |
 |                                                           |
 |   SPDX-License-Identifier: GPL-2.0-or-later               |
 \*---------------------------------------------------------*/
 
+#include <cstdio>
 #include <random>
 #include <vector>
 #include "ViaColor.h"
@@ -23,6 +32,30 @@ enum
     PLAYLIST_FADING_OUT,
     PLAYLIST_FADING_IN,
 };
+
+typedef struct
+{
+    unsigned char   effect;
+    unsigned int    duration_ms;    /* 0 = playlist default */
+    bool            has_color;
+    RGBColor        color;
+} playlist_entry;
+
+static bool parse_color(const std::string& text, RGBColor* color)
+{
+    unsigned int red;
+    unsigned int green;
+    unsigned int blue;
+
+    if(text.size() != 7 || sscanf(text.c_str(), "#%2x%2x%2x", &red, &green, &blue) != 3)
+    {
+        return(false);
+    }
+
+    *color = ToRGBColor(red, green, blue);
+
+    return(true);
+}
 
 class ViaEffectPlaylist : public ViaCustomEffect
 {
@@ -44,33 +77,44 @@ public:
 
     void Configure(const nlohmann::json& settings) override
     {
-        effects.clear();
+        entries.clear();
 
-        nlohmann::json names = settings.value("effects", nlohmann::json::array());
+        nlohmann::json queue = settings.value("effects", nlohmann::json::array());
 
-        for(std::size_t name_idx = 0; name_idx < names.size(); name_idx++)
+        for(std::size_t queue_idx = 0; queue_idx < queue.size(); queue_idx++)
         {
-            if(!names[name_idx].is_string())
+            playlist_entry  entry   = { VIA_EFFECT_OFF, 0, false, 0 };
+            std::string     name;
+
+            if(queue[queue_idx].is_string())
             {
-                continue;
+                name = queue[queue_idx].get<std::string>();
+            }
+            else if(queue[queue_idx].is_object())
+            {
+                name                = queue[queue_idx].value("effect", "");
+                entry.duration_ms   = (unsigned int)queue[queue_idx].value("duration_s", 0) * 1000;
+                entry.has_color     = parse_color(queue[queue_idx].value("color", ""), &entry.color);
             }
 
-            int effect_id = via_find_effect(context.entry, context.max_effect, names[name_idx].get<std::string>());
+            int effect_id = via_find_effect(context.entry, context.max_effect, name);
 
             if(effect_id > VIA_EFFECT_OFF)
             {
-                effects.push_back((unsigned char)effect_id);
+                entry.effect = (unsigned char)effect_id;
+                entries.push_back(entry);
             }
         }
 
         /*-------------------------------------------------*\
-        | Empty list: play every effect the firmware has    |
+        | Empty queue: play every effect the firmware has   |
         \*-------------------------------------------------*/
-        if(effects.empty())
+        if(entries.empty())
         {
             for(unsigned int effect_id = VIA_EFFECT_SOLID_COLOR; effect_id <= context.max_effect; effect_id++)
             {
-                effects.push_back((unsigned char)effect_id);
+                playlist_entry entry = { (unsigned char)effect_id, 0, false, 0 };
+                entries.push_back(entry);
             }
         }
 
@@ -79,12 +123,7 @@ public:
         shuffle     = settings.value("shuffle", false);
         random_hue  = settings.value("random_hue", false);
 
-        if(duration_ms < PLAYLIST_MIN_DURATION_MS)
-        {
-            duration_ms = PLAYLIST_MIN_DURATION_MS;
-        }
-
-        if(position >= effects.size())
+        if(position >= entries.size())
         {
             position = 0;
         }
@@ -102,9 +141,10 @@ public:
         if(phase_start_ms == 0)
         {
             phase_start_ms = now_ms;
-            PickColor();
+            PickRandomHue();
         }
 
+        unsigned int    show_ms     = EntryDuration();
         unsigned int    elapsed     = (unsigned int)(now_ms - phase_start_ms);
         unsigned int    half_fade   = fade_ms / 2;
         float           level       = 1.0f;
@@ -113,12 +153,12 @@ public:
         switch(phase)
         {
             case PLAYLIST_SHOWING:
-                if(elapsed >= duration_ms)
+                if(elapsed >= show_ms)
                 {
                     Advance(now_ms, half_fade > 0 ? PLAYLIST_FADING_OUT : PLAYLIST_FADING_IN);
                     return(Tick(now_ms, params, state));
                 }
-                wait_ms = duration_ms - elapsed;
+                wait_ms = show_ms - elapsed;
                 break;
 
             case PLAYLIST_FADING_OUT:
@@ -138,7 +178,7 @@ public:
                 {
                     phase           = PLAYLIST_SHOWING;
                     phase_start_ms  = now_ms;
-                    wait_ms         = duration_ms;
+                    wait_ms         = EntryDuration();
                 }
                 else
                 {
@@ -147,14 +187,23 @@ public:
                 break;
         }
 
-        if(!random_hue)
+        const playlist_entry& entry = entries[position];
+
+        if(entry.has_color)
         {
-            via_blend_hue_sat(params.colors[0], params.colors[0], 0.0f, &hue, &sat);
+            via_blend_hue_sat(entry.color, entry.color, 0.0f, &state->hue, &state->sat);
+        }
+        else if(random_hue)
+        {
+            state->hue = hue;
+            state->sat = sat;
+        }
+        else
+        {
+            via_blend_hue_sat(params.colors[0], params.colors[0], 0.0f, &state->hue, &state->sat);
         }
 
-        state->effect       = effects[position];
-        state->hue          = hue;
-        state->sat          = sat;
+        state->effect       = entry.effect;
         state->brightness   = (unsigned char)(params.brightness * level);
         state->speed        = params.speed;
 
@@ -163,7 +212,7 @@ public:
 
 private:
     via_effect_context          context;
-    std::vector<unsigned char>  effects;
+    std::vector<playlist_entry> entries;
     unsigned int                duration_ms;
     unsigned int                fade_ms;
     bool                        shuffle;
@@ -175,37 +224,44 @@ private:
     unsigned char               sat;
     std::mt19937                random_engine;
 
+    unsigned int EntryDuration()
+    {
+        unsigned int show_ms = (entries[position].duration_ms != 0) ? entries[position].duration_ms : duration_ms;
+
+        return(show_ms < PLAYLIST_MIN_DURATION_MS ? PLAYLIST_MIN_DURATION_MS : show_ms);
+    }
+
     /*-----------------------------------------------------*\
-    | Fading in starts the next effect while it is dark     |
+    | Fading in starts the next entry while it is dark      |
     \*-----------------------------------------------------*/
     void Advance(unsigned long long now_ms, int next_phase)
     {
         if(next_phase == PLAYLIST_FADING_IN)
         {
-            if(shuffle && effects.size() > 1)
+            if(shuffle && entries.size() > 1)
             {
                 std::size_t next = position;
 
                 while(next == position)
                 {
-                    next = std::uniform_int_distribution<std::size_t>(0, effects.size() - 1)(random_engine);
+                    next = std::uniform_int_distribution<std::size_t>(0, entries.size() - 1)(random_engine);
                 }
 
                 position = next;
             }
             else
             {
-                position = (position + 1) % effects.size();
+                position = (position + 1) % entries.size();
             }
 
-            PickColor();
+            PickRandomHue();
         }
 
         phase           = next_phase;
         phase_start_ms  = now_ms;
     }
 
-    void PickColor()
+    void PickRandomHue()
     {
         if(random_hue)
         {

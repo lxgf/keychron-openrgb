@@ -40,7 +40,7 @@ private:
     void            AddNumber(QFormLayout* form, const char* section, const char* key, const char* label, int min, int max, const char* suffix);
     void            AddCheck(QFormLayout* form, const char* section, const char* key, const char* label);
     void            AddTime(QFormLayout* form, const char* section, const char* key, const char* label);
-    void            AddEffectList(QFormLayout* form, const char* section, const char* key, const char* label);
+    void            AddPlaylistQueue(QFormLayout* form, const char* section, const char* key);
 
     void            Store(const char* section, const char* key, const nlohmann::json& value);
 };
